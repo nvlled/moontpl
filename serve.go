@@ -1,4 +1,4 @@
-package main
+package moontpl
 
 import (
 	"errors"
@@ -9,10 +9,20 @@ import (
 	"strings"
 )
 
+func Serve(addr string) {
+	server := &http.Server{
+		Addr:    addr,
+		Handler: createHTTPHandler(),
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		panic(err)
+	}
+}
+
 func createHTTPHandler() http.Handler {
 	pageDir := http.FileServer(http.Dir(SiteDir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		pagePath := path.Clean(r.URL.Path)
 
 		var filename string

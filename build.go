@@ -1,4 +1,4 @@
-package main
+package moontpl
 
 import (
 	"path/filepath"
@@ -10,15 +10,15 @@ import (
 type Link string
 type Filename string
 
-type Builder struct {
+type siteBuilder struct {
 	done       map[Link]bool
 	buildQueue []Link
 	srcDir     string
 	destDir    string
 }
 
-func NewBuilder(srcDir, destDir string) *Builder {
-	builder := &Builder{
+func newBuilder(srcDir, destDir string) *siteBuilder {
+	builder := &siteBuilder{
 		done:       map[Link]bool{},
 		buildQueue: []Link{},
 		srcDir:     srcDir,
@@ -27,7 +27,7 @@ func NewBuilder(srcDir, destDir string) *Builder {
 	return builder
 }
 
-func (b *Builder) createState(filename string, params PathParams) *lua.LState {
+func (b *siteBuilder) createState(filename string, params PathParams) *lua.LState {
 	L := createState(filename)
 
 	L.PreloadModule("page", func(L *lua.LState) int {
@@ -59,13 +59,13 @@ func (b *Builder) createState(filename string, params PathParams) *lua.LState {
 	return L
 }
 
-func (b *Builder) queueLink(link string) {
+func (b *siteBuilder) queueLink(link string) {
 	if !b.done[Link(link)] {
 		b.buildQueue = append(b.buildQueue, Link(link))
 	}
 }
 
-func (b *Builder) Build(src, dest string, params PathParams) error {
+func (b *siteBuilder) Build(src, dest string, params PathParams) error {
 	L := b.createState(src, params)
 	defer L.Close()
 
@@ -100,12 +100,12 @@ func (b *Builder) Build(src, dest string, params PathParams) error {
 	return nil
 }
 
-func (b *Builder) CopyNonSourceFiles(srcDir, destDir string) error {
+func (b *siteBuilder) CopyNonSourceFiles(srcDir, destDir string) error {
 	// TODO:
 	return nil
 }
 
-func (b *Builder) BuildAll() error {
+func (b *siteBuilder) BuildAll() error {
 	for _, p := range GetPageFilenames(b.srcDir) {
 		b.queueLink(p.Link)
 	}

@@ -1,7 +1,4 @@
-// In here are the go functions that are to be exported
-// in the lua environment
-
-package main
+package moontpl
 
 import (
 	"io/fs"
