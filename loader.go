@@ -13,9 +13,6 @@ type Loader struct {
 	fsys fs.FS
 }
 
-// TODO: luapath must be relative
-//./lua/?.lua;/home/ronald/proj/goom/site/?.lua;
-
 func initFsLoader(L *lua.LState, fsys fs.FS) {
 	loader := &Loader{fsys}
 	pkg := L.GetField(L.Get(lua.EnvironIndex), "package").(*lua.LTable)
@@ -25,7 +22,6 @@ func initFsLoader(L *lua.LState, fsys fs.FS) {
 
 func (l *Loader) LoadFile(L *lua.LState) int {
 	name := L.CheckString(1)
-	println("loading file  from fsys", name)
 	path, msg := l.loFindFile(L, name, "path")
 	if len(path) == 0 {
 		L.Push(lua.LString(msg))
