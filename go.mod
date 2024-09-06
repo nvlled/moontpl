@@ -8,4 +8,7 @@ require (
 	layeh.com/gopher-luar v1.0.11
 )
 
-require golang.org/x/text v0.16.0 // indirect
+require (
+	github.com/laher/mergefs v0.1.1 // indirect
+	golang.org/x/text v0.16.0 // indirect
+)

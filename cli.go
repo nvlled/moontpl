@@ -1,6 +1,7 @@
 package moontpl
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"log"
@@ -8,8 +9,10 @@ import (
 	"path/filepath"
 
 	"github.com/samber/lo"
-	lua "github.com/yuin/gopher-lua"
 )
+
+//go:embed lua/*
+var embedded embed.FS
 
 func ExecuteCLI() {
 	cwd, err := os.Getwd()
@@ -19,23 +22,23 @@ func ExecuteCLI() {
 	}
 	SiteDir = filepath.Join(cwd, "site")
 
-	pathPtr := flag.String("luapath", SiteDir, "add directory to LUA_PATH")
+	pathPtr := flag.String("luadir", SiteDir, "add directory to LUA_PATH")
 	flag.Parse()
 
+	AddFs(embedded)
+	AddLuaPath("./lua/?.lua")
+	AddLuaPath(fmt.Sprintf("./%s/?.lua", SiteDir))
+
 	luaPath := os.Getenv("LUA_PATH")
-	lua.LuaPathDefault = ";./lua/?.lua;" + luaPath
+	if luaPath != "" {
+		AddLuaPath(luaPath)
+	}
 
 	if *pathPtr != "" {
 		if !filepath.IsAbs(*pathPtr) {
 			*pathPtr = lo.Must(filepath.Abs(*pathPtr))
 		}
-		SiteDir = *pathPtr
-		// LuaPathDefault is set to something like:
-		//   ./?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua
-		// If LUA_PATH env is set, LuaPathDefault is ignored.
-		// Syntax of LUA_PATH is similiar to LuaPathDefault shown above.
-		//os.Setenv("LUA_PATH", fmt.Sprintf("./lua/?.lua;%s/?.lua", BaseDir))
-		lua.LuaPathDefault = fmt.Sprintf("./lua/?.lua;%s/?.lua;%s", SiteDir, luaPath)
+		AddLuaPath(filepath.Join(*pathPtr, "?.lua"))
 	}
 
 	args := flag.Args()
@@ -60,14 +63,26 @@ func ExecuteCLI() {
 		}
 
 	case "serve":
+		if len(args) == 1 {
+			SiteDir = args[0]
+			AddLuaDir(SiteDir)
+		} else {
+			println("usage: serve [site-dir]")
+		}
 		Serve("localhost:8080")
 
 	case "build":
 		{
-			outputDir := "output"
 			if len(args) > 0 {
+				SiteDir = args[0]
+				AddLuaDir(SiteDir)
+			}
+
+			outputDir := "output"
+			if len(args) > 1 {
 				outputDir = args[0]
 			}
+
 			builder := newBuilder(SiteDir, outputDir)
 			builder.BuildAll()
 		}

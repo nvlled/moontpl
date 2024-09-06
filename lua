@@ -1,1 +1,0 @@
-/home/ronald/proj/moon-temple/src/

@@ -1,8 +1,12 @@
 package moontpl
 
 import (
+	"io/fs"
 	"log"
+	"path"
+	"strings"
 
+	"github.com/laher/mergefs"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
@@ -43,9 +47,10 @@ moontpl.ExecuteCLI()
 */
 var (
 	// if there's only one file, set to the directory containing the file
-	SiteDir    = "./site"
-	luaModules = map[string]ModMap{}
-	luaGlobals = map[string]any{}
+	SiteDir     = "./site"
+	luaModules  = map[string]ModMap{}
+	luaGlobals  = map[string]any{}
+	fileSystems = []fs.FS{}
 )
 
 type ModMap map[string]any
@@ -54,11 +59,34 @@ type LuaModule interface {
 	LMod()
 }
 
+func AddFs(fsys fs.FS) {
+	fileSystems = append(fileSystems, fsys)
+}
+
 func SetGlobal(varname string, obj any) {
 	luaGlobals[varname] = obj
 }
 func SetModule(moduleName string, modMap ModMap) {
 	luaModules[moduleName] = modMap
+}
+
+func AddLuaPath(pathStr string) {
+	var sep string
+	var path = strings.TrimSpace(lua.LuaPathDefault)
+
+	if len(path) > 0 {
+		if path[len(path)-1] == ';' {
+			sep = ""
+		} else {
+			sep = ";"
+		}
+	}
+
+	lua.LuaPathDefault = path + sep + pathStr
+}
+
+func AddLuaDir(dir string) {
+	AddLuaPath(path.Join(dir, "?.lua"))
 }
 
 func createState(filename string) *lua.LState {
@@ -83,6 +111,9 @@ func createState(filename string) *lua.LState {
 	initAddedModules(L)
 	initEnvModule(L, filename)
 	initPathModule(L, filename)
+
+	fsys := mergefs.Merge(fileSystems...)
+	initFsLoader(L, fsys)
 
 	return L
 }
