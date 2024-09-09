@@ -29,7 +29,10 @@ type Page struct {
 func GetPageFilenames(baseDir string) []PagePath {
 	var result []PagePath
 	filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
-		if strings.HasSuffix(filename, ".html.lua") {
+		if err != nil {
+			return err
+		}
+		if filepath.Ext(filename) == ".lua" {
 			result = append(result, getPagePath(filename))
 		}
 		return nil

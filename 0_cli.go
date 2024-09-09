@@ -64,7 +64,7 @@ func ExecuteCLI() {
 
 	case "serve":
 		if len(args) == 1 {
-			SiteDir = args[0]
+			SiteDir = lo.Must(filepath.Abs(args[0]))
 			AddLuaDir(SiteDir)
 		} else {
 			println("usage: serve [site-dir]")
@@ -74,14 +74,15 @@ func ExecuteCLI() {
 	case "build":
 		{
 			if len(args) > 0 {
-				SiteDir = args[0]
+				SiteDir = lo.Must(filepath.Abs(args[0]))
 				AddLuaDir(SiteDir)
 			}
 
 			outputDir := "output"
 			if len(args) > 1 {
-				outputDir = args[0]
+				outputDir = args[1]
 			}
+			outputDir = lo.Must(filepath.Abs(outputDir))
 
 			builder := newBuilder(SiteDir, outputDir)
 			builder.BuildAll()
