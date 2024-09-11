@@ -7,7 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
+
+	"github.com/samber/lo"
 )
 
 func fsExists(filename string) bool {
@@ -33,6 +37,29 @@ func fsStat(filename string) (fs.FileInfo, error) {
 	}
 	defer file.Close()
 	return file.Stat()
+}
+
+func mustGetwd() string {
+	return lo.Must(os.Getwd())
+}
+
+func mustAbs(filename string) string {
+	return lo.Must(filepath.Abs(filename))
+}
+
+func isDirectory(path string) bool {
+	stat := lo.Must(fsStat(path))
+	if stat != nil {
+		return stat.IsDir()
+	}
+	return false
+}
+
+func isSubDirectory(base, sub string) bool {
+	if len(base) > 0 && base[len(base)-1] != os.PathSeparator {
+		base += string(os.PathSeparator)
+	}
+	return strings.HasPrefix(sub, base)
 }
 
 func respondInternalError(w http.ResponseWriter, err error) {

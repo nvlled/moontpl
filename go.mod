@@ -9,6 +9,8 @@ require (
 )
 
 require (
+	github.com/alexflint/go-arg v1.5.1 // indirect
+	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/laher/mergefs v0.1.1 // indirect
 	golang.org/x/text v0.16.0 // indirect
 )
