@@ -142,12 +142,12 @@ func (b *siteBuilder) BuildAll() error {
 }
 
 func (b *siteBuilder) CopyNonSourceFiles(srcDir, destDir string) error {
-	fs.WalkDir(os.DirFS(srcDir), ".", func(p string, dir fs.DirEntry, err error) error {
-		if dir.IsDir() {
-			return nil
-		}
+	return fs.WalkDir(os.DirFS(srcDir), ".", func(p string, dir fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if dir.IsDir() {
+			return nil
 		}
 		if filepath.Ext(p) == ".lua" && !b.copyLuaSourceFiles {
 			return nil
@@ -155,6 +155,4 @@ func (b *siteBuilder) CopyNonSourceFiles(srcDir, destDir string) error {
 		println("copy  ", filepath.Join(srcDir, p), "->", filepath.Join(destDir, p))
 		return nil
 	})
-
-	return nil
 }

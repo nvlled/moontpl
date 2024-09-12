@@ -32,7 +32,7 @@ func GetPageFilenames(baseDir string) []PagePath {
 		if err != nil {
 			return err
 		}
-		if filepath.Ext(filename) == ".lua" {
+		if strings.HasSuffix(filename, ".html.lua") {
 			result = append(result, getPagePath(filename))
 		}
 		return nil

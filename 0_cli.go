@@ -122,7 +122,11 @@ func ExecuteCLI() {
 			if !isDirectory(SiteDir) {
 				println("error: SITEDIR must be a directory")
 				os.Exit(1)
-			} else if !isDirectory(outputDir) {
+			}
+
+			os.MkdirAll(outputDir, 0644)
+
+			if !isDirectory(outputDir) {
 				println("error: OUTPUTDIR must be a directory")
 				os.Exit(1)
 			}
