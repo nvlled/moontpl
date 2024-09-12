@@ -11,12 +11,13 @@ import (
 	luar "layeh.com/gopher-luar"
 )
 
+// TODO: don't use global variables since it makes it harder to test
+//       - use a separate lua state for GetPages
+
 const (
-	baseIndex = iota - 8888880
-	hookIndex
-	cacheIndex
-	noRecurseIndex
+	registryPrefix = "moontpl."
 )
+
 const (
 	CommandNone = iota
 	CommandRun
@@ -25,7 +26,7 @@ const (
 )
 
 var (
-	SiteDir = "./site"
+	SiteDir = ""
 	Command = CommandNone
 
 	luaModules  = map[string]ModMap{}
@@ -114,10 +115,7 @@ func openLibs(L *lua.LState) {
 	}
 
 	L.SetGlobal("print", L.NewFunction(func(L *lua.LState) int {
-		lindex := lua.LNumber(noRecurseIndex)
-		globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
-
-		if L.RawGet(globals, lindex) != lua.LNil {
+		if GetInternalVar(L, "recursed") != lua.LNil {
 			return 0
 		}
 
@@ -175,15 +173,12 @@ func initEnvModule(L *lua.LState, filename string) {
 		}))
 
 		L.SetField(mod, "getPages", L.NewFunction(func(L *lua.LState) int {
-			lindex := lua.LNumber(noRecurseIndex)
-			globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
-
-			if L.RawGet(globals, lindex) != lua.LNil {
+			if GetInternalVar(L, "recursed") != lua.LNil {
 				L.Push(L.NewTable())
 				return 1
 			}
-			L.RawSet(globals, lindex, lua.LTrue)
-			defer L.RawSet(globals, lindex, lua.LNil)
+			SetInternalVar(L, "recursed", lua.LTrue)
+			defer SetInternalVar(L, "recursed", lua.LNil)
 
 			if Command == CommandBuild {
 				if cachedPages == nil {
@@ -237,29 +232,12 @@ func initPathModule(L *lua.LState, filename string) {
 	})
 }
 
-func getCacheTable(L *lua.LState) *lua.LTable {
-	lindex := lua.LNumber(cacheIndex)
-	globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
-
-	var cacheTable *lua.LTable
-	if lv := L.RawGet(globals, lindex); lv == lua.LNil {
-		cacheTable = L.NewTable()
-		globals.RawSet(lindex, cacheTable)
-	} else {
-		cacheTable = lv.(*lua.LTable)
-	}
-
-	return cacheTable
-}
-
 func getStateCache(L *lua.LState, key string) lua.LValue {
-	cacheTable := getCacheTable(L)
-	return L.GetField(cacheTable, key)
+	return GetInternalVar(L, "cache."+key)
 }
 
 func setStateCache(L *lua.LState, key string, value lua.LValue) {
-	cacheTable := getCacheTable(L)
-	L.SetField(cacheTable, key, value)
+	SetInternalVar(L, "cache."+key, value)
 }
 
 func luarFromArray[T any](L *lua.LState, items []T) lua.LValue {
@@ -268,4 +246,12 @@ func luarFromArray[T any](L *lua.LState, items []T) lua.LValue {
 		t.Append(luar.New(L, x))
 	}
 	return t
+}
+
+func SetInternalVar(L *lua.LState, key string, val lua.LValue) {
+	L.G.Registry.RawSetString(registryPrefix+key, val)
+}
+
+func GetInternalVar(L *lua.LState, key string) lua.LValue {
+	return L.G.Registry.RawGetString(registryPrefix + key)
 }

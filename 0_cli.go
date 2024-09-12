@@ -51,9 +51,6 @@ type Args struct {
 var args Args
 
 func ExecuteCLI() {
-	AddFs(embedded)
-	AddLuaPath("./lua/?.lua")
-
 	p, err := arg.NewParser(arg.Config{}, &args)
 	if err != nil {
 		panic(err)
@@ -95,7 +92,7 @@ func ExecuteCLI() {
 			if args.Run.SiteDir != "" {
 				SiteDir = lo.Must(filepath.Abs(args.Run.SiteDir))
 			} else {
-				path := lo.Must(filepath.Rel(mustGetwd(), mustAbs(args.Run.Filename)))
+				path := mustRel(mustGetwd(), mustAbs(args.Run.Filename))
 				subDir, found := findFirstSubDirWithLuaFile(path)
 				if found {
 					SiteDir = mustAbs(subDir)

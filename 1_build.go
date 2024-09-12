@@ -51,8 +51,7 @@ func (b *siteBuilder) createState(filename string, params PathParams) *lua.LStat
 		L.SetField(mod, "queue", luar.New(L, b.queueLink))
 		L.SetField(mod, "onPageRender", L.NewFunction(func(L *lua.LState) int {
 			hookFn := L.ToFunction(1)
-			globals := L.Get(lua.GlobalsIndex)
-			L.SetTable(globals, lua.LNumber(hookIndex), hookFn)
+			SetInternalVar(L, "onPageRenderFn", hookFn)
 			return 0
 		}))
 
@@ -80,8 +79,8 @@ func (b *siteBuilder) Build(src, dest string) error {
 	}
 
 	lv := L.Get(-1)
-	globals := L.Get(lua.GlobalsIndex)
-	if fn, ok := L.GetTable(globals, lua.LNumber(hookIndex)).(*lua.LFunction); ok && fn != nil {
+
+	if fn, ok := GetInternalVar(L, "onPageRenderFn").(*lua.LFunction); ok && fn != nil {
 		err := L.CallByParam(lua.P{
 			Fn:      fn,
 			NRet:    1,

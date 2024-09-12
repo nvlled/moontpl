@@ -83,3 +83,11 @@ func TestLoading(t *testing.T) {
 		i++
 	}
 }
+
+func TestBuildHook(t *testing.T) {
+	output, err := RenderFile("test/data/hook-build.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	println(output)
+}

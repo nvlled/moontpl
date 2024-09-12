@@ -47,6 +47,12 @@ func mustAbs(filename string) string {
 	return lo.Must(filepath.Abs(filename))
 }
 
+func mustRel(basePath, targetPath string) string {
+	basePath = mustAbs(basePath)
+	targetPath = mustAbs(targetPath)
+	return lo.Must(filepath.Rel(basePath, targetPath))
+}
+
 func isDirectory(path string) bool {
 	stat := lo.Must(fsStat(path))
 	if stat != nil {

@@ -40,12 +40,12 @@ func GetPageFilenames(baseDir string) []PagePath {
 func getPagePath(filename string) PagePath {
 	filename = lo.Must(filepath.Abs(filename))
 
-	link := lo.Must(filepath.Rel(SiteDir, filename))
+	link := mustRel(SiteDir, filename)
 	link = "/" + strings.TrimSuffix(link, ".lua")
 
 	return PagePath{
 		AbsFile: filename,
-		RelFile: lo.Must(filepath.Rel(SiteDir, filename)),
+		RelFile: mustRel(SiteDir, filename),
 		Link:    link,
 	}
 }
@@ -182,6 +182,5 @@ func RelativeFrom(targetLink, srcPage string) string {
 	if !filepath.IsAbs(targetLink) {
 		return targetLink
 	}
-	return lo.Must(filepath.Rel(filepath.Dir(srcPage), targetLink))
-	//return lo.Must(filepath.Rel(targetLink, filepath.Dir(srcPage)))
+	return mustRel(filepath.Dir(srcPage), targetLink)
 }
