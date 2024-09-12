@@ -9,8 +9,6 @@ import (
 	luar "layeh.com/gopher-luar"
 )
 
-const hookIndex = -0xFFF001
-
 type Link string
 type Filename string
 
@@ -51,7 +49,7 @@ func (b *siteBuilder) createState(filename string, params PathParams) *lua.LStat
 	L.PreloadModule("build", func(L *lua.LState) int {
 		mod := L.NewTable()
 		L.SetField(mod, "queue", luar.New(L, b.queueLink))
-		L.SetField(mod, "hook", L.NewFunction(func(L *lua.LState) int {
+		L.SetField(mod, "onPageRender", L.NewFunction(func(L *lua.LState) int {
 			hookFn := L.ToFunction(1)
 			globals := L.Get(lua.GlobalsIndex)
 			L.SetTable(globals, lua.LNumber(hookIndex), hookFn)

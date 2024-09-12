@@ -2,7 +2,6 @@ package moontpl
 
 import (
 	"io/fs"
-	"log"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -11,8 +10,6 @@ import (
 	"github.com/samber/lo"
 	lua "github.com/yuin/gopher-lua"
 )
-
-const NO_RECURSE = "__NO_RECURSE__"
 
 type PathParams map[string]string
 type PagePath struct {
@@ -23,7 +20,7 @@ type PagePath struct {
 
 type Page struct {
 	PagePath
-	Data map[string]any
+	Data *lua.LTable
 }
 
 func GetPageFilenames(baseDir string) []PagePath {
@@ -54,18 +51,10 @@ func getPagePath(filename string) PagePath {
 }
 
 func GetPages(L *lua.LState) ([]Page, error) {
-	if L.GetGlobal(NO_RECURSE) != lua.LNil {
-		return []Page{}, nil
-	}
-
-	L.SetGlobal(NO_RECURSE, lua.LNumber(1))
-	defer L.SetGlobal(NO_RECURSE, lua.LNil)
-
 	result := []Page{}
-	for _, entry := range GetPageFilenames(".") {
+	for _, entry := range GetPageFilenames(SiteDir) {
 		data, err := GetPageData(L, entry.AbsFile)
 		if err != nil {
-			log.Printf("failed to get pages: %v", err)
 			return nil, err
 		}
 		result = append(result, Page{
@@ -77,33 +66,23 @@ func GetPages(L *lua.LState) ([]Page, error) {
 	return result, nil
 }
 
-func GetPageData(L *lua.LState, filename string) (map[string]any, error) {
+func GetPageData(L *lua.LState, filename string) (*lua.LTable, error) {
 	if err := L.DoFile(filename); err != nil {
-		return map[string]any{}, err
+		return L.NewTable(), err
 	}
 	lv := L.Get(-1)
 
 	if lv.Type() != lua.LTTable {
-		return map[string]any{}, nil
+		return L.NewTable(), nil
 	}
 
 	table := lv.(*lua.LTable)
-	result := map[string]any{}
 
 	if data, ok := table.RawGet(lua.LString("data")).(*lua.LTable); ok {
-		data.ForEach(func(k, v lua.LValue) {
-			switch v.Type() {
-			case lua.LTBool:
-				result[k.String()] = lua.LVAsBool(v)
-			case lua.LTNumber:
-				result[k.String()] = lua.LVAsNumber(v)
-			case lua.LTString:
-				result[k.String()] = lua.LVAsString(v)
-			}
-		})
+		return data, nil
 	}
 
-	return result, nil
+	return L.NewTable(), nil
 }
 
 func GetPathParams(filename string) PathParams {

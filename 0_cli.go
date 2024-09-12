@@ -91,15 +91,16 @@ func ExecuteCLI() {
 	switch {
 	case args.Run != nil:
 		{
+			Command = CommandRun
 			if args.Run.SiteDir != "" {
 				SiteDir = lo.Must(filepath.Abs(args.Run.SiteDir))
 			} else {
 				path := lo.Must(filepath.Rel(mustGetwd(), mustAbs(args.Run.Filename)))
 				subDir, found := findFirstSubDirWithLuaFile(path)
 				if found {
-					SiteDir = subDir
+					SiteDir = mustAbs(subDir)
 				} else {
-					SiteDir = filepath.Dir(args.Run.Filename)
+					SiteDir = mustAbs(filepath.Dir(args.Run.Filename))
 				}
 			}
 
@@ -115,6 +116,7 @@ func ExecuteCLI() {
 
 	case args.Build != nil:
 		{
+			Command = CommandBuild
 			SiteDir = lo.Must(filepath.Abs(args.Build.SiteDir))
 			outputDir := lo.Must(filepath.Abs(args.Build.OutputDir))
 			AddLuaDir(SiteDir)
@@ -151,6 +153,7 @@ func ExecuteCLI() {
 
 	case args.Serve != nil:
 		{
+			Command = CommandServe
 			SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
 			AddLuaDir(SiteDir)
 			Serve("localhost:" + strconv.Itoa(args.Serve.Port))
