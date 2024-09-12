@@ -6,4 +6,5 @@ func init() {
 	// Remove default lua path
 	lua.LuaPathDefault = ""
 
+	moontpl = New()
 }

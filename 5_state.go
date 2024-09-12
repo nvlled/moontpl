@@ -49,6 +49,7 @@ func New() *Moontpl {
 
 	self.AddFs(embedded)
 	self.AddLuaPath("./lua/?.lua")
+	println("new moontpl")
 
 	return self
 }
@@ -239,12 +240,12 @@ func (m *Moontpl) initEnvModule(L *lua.LState, filename string) {
 func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
 	L.PreloadModule("path", func(L *lua.LState) int {
 		mod := L.NewTable()
-		L.SetField(mod, "getParams", luar.New(L, GetPathParams))
+		L.SetField(mod, "getParams", luar.New(L, getPathParams))
 		L.SetField(mod, "setParams", luar.New(L, SetPathParams))
-		L.SetField(mod, "hasParams", luar.New(L, HasPathParams))
+		L.SetField(mod, "hasParams", luar.New(L, hasPathParams))
 		L.SetField(mod, "relative", luar.New(L, func(targetLink string) string {
 			pagePath := m.getPagePath(filename)
-			return RelativeFrom(targetLink, pagePath.Link)
+			return relativeFrom(targetLink, pagePath.Link)
 		}))
 
 		L.Push(mod)

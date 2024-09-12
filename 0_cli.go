@@ -15,25 +15,19 @@ import (
 //go:embed lua/*
 var embedded embed.FS
 
-// TODO: don't use global variables since it makes it harder to test
-//       - use a separate lua state for GetPages
-//       - remove Command constants
-//       - do not use separate struct for site builder
-//       - always load build module
-
-type BuildCmd struct {
+type buildCmd struct {
 	SiteDir    string `arg:"required,positional" help:"directory that contains the source lua files"`
 	OutputDir  string `arg:"positional" help:"directory where the rendered html files will be placed" default:"output"`
 	CopyFiles  bool   `help:"copy and include static files (such as images) in the output" default:"true"`
 	CopySource bool   `help:"copy and include source lua files in the output" default:"false"`
 }
 
-type RunCmd struct {
+type runCmd struct {
 	Filename string `arg:"positional,required" help:"run a lua file and show ouput on the STDOUT"`
 	SiteDir  string `arg:"-d" help:"for nested site directories, set to explicitly indicate where the site root is"`
 }
 
-func (*RunCmd) Epilogue() string {
+func (*runCmd) Epilogue() string {
 	return `SITEDIR is automatically inferred based on the current working directory (CWD).
 For example, in $ moontpl run ./site/foo/bar/page.html.lua
 SITEDIR will be set to ./site since it's the closest directory from CWD to page.html.lua
@@ -41,28 +35,26 @@ This matters when require()'ing files found on the SITEDIR. The alternative is t
 `
 }
 
-type ServeCmd struct {
+type serveCmd struct {
 	SiteDir string `arg:"required,positional" help:"directory that contains the source lua files to serve in a web server"`
 	Port    int    `help:"HTTP port to use" default:"9876"`
 }
 
-type Args struct {
-	Build *BuildCmd `arg:"subcommand:build"`
-	Run   *RunCmd   `arg:"subcommand:run"`
-	Serve *ServeCmd `arg:"subcommand:serve"`
+type cliArgs struct {
+	Build *buildCmd `arg:"subcommand:build"`
+	Run   *runCmd   `arg:"subcommand:run"`
+	Serve *serveCmd `arg:"subcommand:serve"`
 
 	LuaDir []string `arg:"-l,separate" help:"directories where to find lua files with require(), automatically includes SITEDIR"`
 }
 
-var args Args
+var args cliArgs
 
 func ExecuteCLI() {
 	p, err := arg.NewParser(arg.Config{}, &args)
 	if err != nil {
 		panic(err)
 	}
-
-	moon := New()
 
 	err = p.Parse(os.Args[1:])
 	switch {
@@ -90,28 +82,28 @@ func ExecuteCLI() {
 			println("error: luadir must be a DIRECTORY")
 			os.Exit(-1)
 		}
-		moon.AddLuaDir(mustAbs(p))
+		moontpl.AddLuaDir(mustAbs(p))
 	}
 
 	switch {
 	case args.Run != nil:
 		{
-			moon.Command = CommandRun
+			moontpl.Command = CommandRun
 
 			if args.Run.SiteDir != "" {
-				moon.SiteDir = lo.Must(filepath.Abs(args.Run.SiteDir))
+				moontpl.SiteDir = lo.Must(filepath.Abs(args.Run.SiteDir))
 			} else {
 				path := mustRel(mustGetwd(), mustAbs(args.Run.Filename))
 				subDir, found := findFirstSubDirWithLuaFile(path)
 				if found {
-					moon.SiteDir = mustAbs(subDir)
+					moontpl.SiteDir = mustAbs(subDir)
 				} else {
-					moon.SiteDir = mustAbs(filepath.Dir(args.Run.Filename))
+					moontpl.SiteDir = mustAbs(filepath.Dir(args.Run.Filename))
 				}
 			}
 
-			moon.AddLuaPath(fmt.Sprintf("%s/?.lua", moon.SiteDir))
-			output, err := moon.RenderFile(args.Run.Filename)
+			moontpl.AddLuaPath(fmt.Sprintf("%s/?.lua", moontpl.SiteDir))
+			output, err := moontpl.RenderFile(args.Run.Filename)
 
 			if err != nil {
 				panic(err)
@@ -122,12 +114,12 @@ func ExecuteCLI() {
 
 	case args.Build != nil:
 		{
-			moon.Command = CommandBuild
-			moon.SiteDir = lo.Must(filepath.Abs(args.Build.SiteDir))
+			moontpl.Command = CommandBuild
+			moontpl.SiteDir = lo.Must(filepath.Abs(args.Build.SiteDir))
 			outputDir := lo.Must(filepath.Abs(args.Build.OutputDir))
-			moon.AddLuaDir(moon.SiteDir)
+			moontpl.AddLuaDir(moontpl.SiteDir)
 
-			if !isDirectory(moon.SiteDir) {
+			if !isDirectory(moontpl.SiteDir) {
 				println("error: SITEDIR must be a directory")
 				os.Exit(1)
 			}
@@ -139,29 +131,29 @@ func ExecuteCLI() {
 				os.Exit(1)
 			}
 
-			if moon.SiteDir == outputDir {
+			if moontpl.SiteDir == outputDir {
 				println("error: SITEDIR and OUTPUTDIR must not be the same")
 				os.Exit(1)
 			}
 
-			if isSubDirectory(moon.SiteDir, outputDir) || isSubDirectory(outputDir, moon.SiteDir) {
+			if isSubDirectory(moontpl.SiteDir, outputDir) || isSubDirectory(outputDir, moontpl.SiteDir) {
 				println("error: SITEDIR and OUTPUTDIR must be subdirectories of each other")
-				println("  SITEDIR:", moon.SiteDir)
+				println("  SITEDIR:", moontpl.SiteDir)
 				println("  OUTPUTDIR:", outputDir)
 				os.Exit(1)
 			}
 
-			if err := moon.BuildAll(outputDir); err != nil {
+			if err := moontpl.BuildAll(outputDir); err != nil {
 				println("error:", err.Error())
 			}
 		}
 
 	case args.Serve != nil:
 		{
-			moon.Command = CommandServe
-			moon.SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
-			moon.AddLuaDir(moon.SiteDir)
-			moon.Serve("localhost:" + strconv.Itoa(args.Serve.Port))
+			moontpl.Command = CommandServe
+			moontpl.SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
+			moontpl.AddLuaDir(moontpl.SiteDir)
+			moontpl.Serve("localhost:" + strconv.Itoa(args.Serve.Port))
 		}
 	}
 

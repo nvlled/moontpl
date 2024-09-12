@@ -28,7 +28,7 @@ func newSiteBuilder() *siteBuilder {
 	return builder
 }
 
-func (m *Moontpl) createBuildState(filename string, params PathParams) *lua.LState {
+func (m *Moontpl) createBuildState(filename string, params pathParams) *lua.LState {
 	pageData := PageData{}
 	for k, v := range params {
 		pageData[k] = v
@@ -47,7 +47,7 @@ func (m *Moontpl) queueLink(link string) {
 }
 
 func (m *Moontpl) Build(src, dest string) error {
-	params, src := ExtractPathParams(src)
+	params, src := extractPathParams(src)
 
 	L := m.createBuildState(src, params)
 	defer L.Close()
