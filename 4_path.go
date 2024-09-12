@@ -23,36 +23,36 @@ type Page struct {
 	Data *lua.LTable
 }
 
-func GetPageFilenames(baseDir string) []PagePath {
+func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
 	var result []PagePath
 	filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if strings.HasSuffix(filename, ".html.lua") {
-			result = append(result, getPagePath(filename))
+			result = append(result, m.getPagePath(filename))
 		}
 		return nil
 	})
 	return result
 }
 
-func getPagePath(filename string) PagePath {
+func (m *Moontpl) getPagePath(filename string) PagePath {
 	filename = lo.Must(filepath.Abs(filename))
 
-	link := mustRel(SiteDir, filename)
+	link := mustRel(m.SiteDir, filename)
 	link = "/" + strings.TrimSuffix(link, ".lua")
 
 	return PagePath{
 		AbsFile: filename,
-		RelFile: mustRel(SiteDir, filename),
+		RelFile: mustRel(m.SiteDir, filename),
 		Link:    link,
 	}
 }
 
-func GetPages(L *lua.LState) ([]Page, error) {
+func (m *Moontpl) GetPages(L *lua.LState) ([]Page, error) {
 	result := []Page{}
-	for _, entry := range GetPageFilenames(SiteDir) {
+	for _, entry := range m.GetPageFilenames(m.SiteDir) {
 		data, err := GetPageData(L, entry.AbsFile)
 		if err != nil {
 			return nil, err

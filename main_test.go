@@ -12,7 +12,7 @@ func TestCssRender(t *testing.T) { // TODO:
 }
 
 func TestHTMLRender(t *testing.T) {
-	actual, err := RenderString(`
+	actual, err := New().RenderString(`
 		local html = require("html")
 		html.importGlobals()
 		return DIV {
@@ -85,7 +85,7 @@ func TestLoading(t *testing.T) {
 }
 
 func TestBuildHook(t *testing.T) {
-	output, err := RenderFile("test/data/hook-build.lua")
+	output, err := New().RenderFile("test/data/hook-build.lua")
 	if err != nil {
 		t.Fatal(err)
 	}

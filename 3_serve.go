@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-func Serve(addr string) {
+func (m *Moontpl) Serve(addr string) {
 	server := &http.Server{
 		Addr:    addr,
-		Handler: createHTTPHandler(),
+		Handler: m.createHTTPHandler(),
 	}
 
 	if err := server.ListenAndServe(); err != nil {
@@ -20,16 +20,16 @@ func Serve(addr string) {
 	}
 }
 
-func createHTTPHandler() http.Handler {
-	pageDir := http.FileServer(http.Dir(SiteDir))
+func (m *Moontpl) createHTTPHandler() http.Handler {
+	pageDir := http.FileServer(http.Dir(m.SiteDir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		pagePath := path.Clean(r.URL.Path)
 
 		var filename string
 		if pagePath == "/" {
-			filename = path.Join(SiteDir, "index.html.lua")
+			filename = path.Join(m.SiteDir, "index.html.lua")
 		} else {
-			filename = path.Join(SiteDir, pagePath)
+			filename = path.Join(m.SiteDir, pagePath)
 		}
 
 		stat, err := fsStat(filename)
@@ -53,7 +53,7 @@ func createHTTPHandler() http.Handler {
 
 		log.Println("render lua:", filename)
 
-		output, err := RenderFile(filename)
+		output, err := m.RenderFile(filename)
 		if err != nil {
 			respondInternalError(w, err)
 			return

@@ -6,92 +6,55 @@ import (
 	"path/filepath"
 
 	lua "github.com/yuin/gopher-lua"
-	luar "layeh.com/gopher-luar"
 )
 
 type Link string
 type Filename string
 
 type siteBuilder struct {
+	running    bool
 	done       map[Link]bool
 	buildQueue []Link
-	srcDir     string
-	destDir    string
 
 	copyLuaSourceFiles bool
 }
 
-func newBuilder(srcDir, destDir string) *siteBuilder {
+func newSiteBuilder() *siteBuilder {
 	builder := &siteBuilder{
+		running:    false,
 		done:       map[Link]bool{},
 		buildQueue: []Link{},
-		srcDir:     srcDir,
-		destDir:    destDir,
 	}
 	return builder
 }
 
-func (b *siteBuilder) createState(filename string, params PathParams) *lua.LState {
-	L := createState(filename)
+func (m *Moontpl) createBuildState(filename string, params PathParams) *lua.LState {
+	pageData := PageData{}
+	for k, v := range params {
+		pageData[k] = v
+	}
 
-	L.PreloadModule("page", func(L *lua.LState) int {
-		mod := L.NewTable()
-
-		lv := L.NewTable()
-		for k, v := range params {
-			lv.RawSetString(k, lua.LString(v))
-		}
-		L.SetField(mod, "params", lv)
-		L.Push(mod)
-		return 1
-	})
-
-	L.PreloadModule("build", func(L *lua.LState) int {
-		mod := L.NewTable()
-		L.SetField(mod, "queue", luar.New(L, b.queueLink))
-		L.SetField(mod, "onPageRender", L.NewFunction(func(L *lua.LState) int {
-			hookFn := L.ToFunction(1)
-			SetInternalVar(L, "onPageRenderFn", hookFn)
-			return 0
-		}))
-
-		L.Push(mod)
-		return 1
-	})
+	L := m.createState(filename)
+	m.initPageModule(L, pageData)
 
 	return L
 }
 
-func (b *siteBuilder) queueLink(link string) {
-	if !b.done[Link(link)] {
-		b.buildQueue = append(b.buildQueue, Link(link))
+func (m *Moontpl) queueLink(link string) {
+	if !m.builder.done[Link(link)] {
+		m.builder.buildQueue = append(m.builder.buildQueue, Link(link))
 	}
 }
 
-func (b *siteBuilder) Build(src, dest string) error {
+func (m *Moontpl) Build(src, dest string) error {
 	params, src := ExtractPathParams(src)
 
-	L := b.createState(src, params)
+	L := m.createBuildState(src, params)
 	defer L.Close()
 
-	if err := L.DoFile(src); err != nil {
+	lv, err := m.renderFile(L, src)
+	if err != nil {
 		return err
-	}
-
-	lv := L.Get(-1)
-
-	if fn, ok := GetInternalVar(L, "onPageRenderFn").(*lua.LFunction); ok && fn != nil {
-		err := L.CallByParam(lua.P{
-			Fn:      fn,
-			NRet:    1,
-			Protect: false,
-		}, lv)
-		if err != nil {
-			return err
-		}
-		if ret := L.Get(-1); ret != nil {
-			lv = ret
-		}
 	}
 
 	if lv.Type() == lua.LTNil {
@@ -107,38 +70,41 @@ func (b *siteBuilder) Build(src, dest string) error {
 	return nil
 }
 
-func (b *siteBuilder) BuildAll() error {
-	for _, p := range GetPageFilenames(b.srcDir) {
-		b.queueLink(p.Link)
+func (m *Moontpl) BuildAll(outputDir string) error {
+	m.builder.running = true
+	defer func() { m.builder.running = false }()
+
+	for _, p := range m.GetPageFilenames(m.SiteDir) {
+		m.queueLink(p.Link)
 	}
 
-	for len(b.buildQueue) > 0 {
-		linkWithParams := b.buildQueue[0]
-		b.buildQueue = b.buildQueue[1:]
+	for len(m.builder.buildQueue) > 0 {
+		linkWithParams := m.builder.buildQueue[0]
+		m.builder.buildQueue = m.builder.buildQueue[1:]
 
-		if _, ok := b.done[linkWithParams]; ok {
+		if _, ok := m.builder.done[linkWithParams]; ok {
 			continue
 		}
 
-		src := filepath.Join(b.srcDir, string(linkWithParams)+".lua")
-		dest := filepath.Join(b.destDir, string(linkWithParams))
+		src := filepath.Join(m.SiteDir, string(linkWithParams)+".lua")
+		dest := filepath.Join(outputDir, string(linkWithParams))
 
 		println("render", src, "->", dest)
-		if err := b.Build(src, dest); err != nil {
+		if err := m.Build(src, dest); err != nil {
 			panic(err)
 		}
 
-		b.done[linkWithParams] = true
+		m.builder.done[linkWithParams] = true
 	}
 
-	if err := b.CopyNonSourceFiles(b.srcDir, b.destDir); err != nil {
+	if err := m.CopyNonSourceFiles(m.SiteDir, outputDir); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *siteBuilder) CopyNonSourceFiles(srcDir, destDir string) error {
+func (m *Moontpl) CopyNonSourceFiles(srcDir, destDir string) error {
 	return fs.WalkDir(os.DirFS(srcDir), ".", func(p string, dir fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -146,7 +112,7 @@ func (b *siteBuilder) CopyNonSourceFiles(srcDir, destDir string) error {
 		if dir.IsDir() {
 			return nil
 		}
-		if filepath.Ext(p) == ".lua" && !b.copyLuaSourceFiles {
+		if filepath.Ext(p) == ".lua" && !m.builder.copyLuaSourceFiles {
 			return nil
 		}
 		println("copy  ", filepath.Join(srcDir, p), "->", filepath.Join(destDir, p))

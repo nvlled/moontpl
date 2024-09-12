@@ -2,14 +2,19 @@ package moontpl
 
 import lua "github.com/yuin/gopher-lua"
 
-func RenderFile(filename string) (string, error) {
-	L := createState(filename)
+func (m *Moontpl) RenderFile(filename string) (string, error) {
+	L := m.createState(filename)
 	defer L.Close()
-	return renderFile(L, filename)
+
+	lv, err := m.renderFile(L, filename)
+	if err != nil {
+		return "", err
+	}
+	return L.ToStringMeta(lv).String(), nil
 }
 
-func RenderString(luaCode string) (string, error) {
-	L := createState("inline.lua")
+func (m *Moontpl) RenderString(luaCode string) (string, error) {
+	L := m.createState("inline.lua")
 	defer L.Close()
 	if err := L.DoString(luaCode); err != nil {
 		return "", err
@@ -22,15 +27,34 @@ func RenderString(luaCode string) (string, error) {
 	return L.ToStringMeta(lv).String(), nil
 }
 
-func renderFile(L *lua.LState, filename string) (string, error) {
+func (m *Moontpl) renderFile(L *lua.LState, filename string) (lua.LValue, error) {
 	if err := L.DoFile(filename); err != nil {
-		return "", err
+		return lua.LNil, err
 	}
 
 	lv := L.Get(-1)
 	if lv.Type() == lua.LTNil {
-		return "", nil
+		return lua.LNil, nil
 	}
 
-	return L.ToStringMeta(lv).String(), nil
+	if hook, ok := getLoadedModule(L, "hook").(*lua.LTable); ok {
+		onPageRender, isFunc := hook.RawGetString("onPageRender").(*lua.LFunction)
+		if isFunc {
+			err := L.CallByParam(lua.P{
+				Fn:      onPageRender,
+				NRet:    1,
+				Protect: false,
+			}, lv)
+
+			if err != nil {
+				return lua.LNil, err
+			}
+
+			if ret := L.Get(-1); ret != lua.LNil {
+				lv = ret
+			}
+		}
+	}
+
+	return lv, nil
 }

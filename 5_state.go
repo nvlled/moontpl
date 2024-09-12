@@ -11,9 +11,6 @@ import (
 	luar "layeh.com/gopher-luar"
 )
 
-// TODO: don't use global variables since it makes it harder to test
-//       - use a separate lua state for GetPages
-
 const (
 	registryPrefix = "moontpl."
 )
@@ -25,16 +22,36 @@ const (
 	CommandBuild
 )
 
-var (
-	SiteDir = ""
-	Command = CommandNone
-
-	luaModules  = map[string]ModMap{}
-	luaGlobals  = map[string]any{}
-	fileSystems = []fs.FS{}
-
+type Moontpl struct {
+	SiteDir     string
+	Command     int
+	luaModules  map[string]ModMap
+	luaGlobals  map[string]any
+	fileSystems []fs.FS
 	cachedPages []Page
-)
+	builder     *siteBuilder
+}
+
+type PageData map[string]any
+
+func New() *Moontpl {
+	self := &Moontpl{
+		SiteDir: "",
+		Command: CommandNone,
+
+		luaModules:  map[string]ModMap{},
+		luaGlobals:  map[string]any{},
+		fileSystems: []fs.FS{},
+		cachedPages: []Page{},
+
+		builder: newSiteBuilder(),
+	}
+
+	self.AddFs(embedded)
+	self.AddLuaPath("./lua/?.lua")
+
+	return self
+}
 
 type ModMap map[string]any
 
@@ -42,18 +59,18 @@ type LuaModule interface {
 	LMod()
 }
 
-func AddFs(fsys fs.FS) {
-	fileSystems = append(fileSystems, fsys)
+func (m *Moontpl) AddFs(fsys fs.FS) {
+	m.fileSystems = append(m.fileSystems, fsys)
 }
 
-func SetGlobal(varname string, obj any) {
-	luaGlobals[varname] = obj
+func (m *Moontpl) SetGlobal(varname string, obj any) {
+	m.luaGlobals[varname] = obj
 }
-func SetModule(moduleName string, modMap ModMap) {
-	luaModules[moduleName] = modMap
+func (m *Moontpl) SetModule(moduleName string, modMap ModMap) {
+	m.luaModules[moduleName] = modMap
 }
 
-func AddLuaPath(pathStr string) {
+func (m *Moontpl) AddLuaPath(pathStr string) {
 	var sep string
 	var path = strings.TrimSpace(lua.LuaPathDefault)
 
@@ -68,23 +85,26 @@ func AddLuaPath(pathStr string) {
 	lua.LuaPathDefault = path + sep + pathStr
 }
 
-func AddLuaDir(dir string) {
-	AddLuaPath(path.Join(dir, "?.lua"))
+func (m *Moontpl) AddLuaDir(dir string) {
+	m.AddLuaPath(path.Join(dir, "?.lua"))
 }
 
-func createState(filename string) *lua.LState {
+func (m *Moontpl) createState(filename string) *lua.LState {
 	L := lua.NewState(lua.Options{
 		SkipOpenLibs: true,
 	})
 
 	openLibs(L)
 
-	initAddedGlobals(L)
-	initAddedModules(L)
-	initEnvModule(L, filename)
-	initPathModule(L, filename)
+	m.initAddedGlobals(L)
+	m.initAddedModules(L)
+	m.initEnvModule(L, filename)
+	m.initPathModule(L, filename)
+	m.initHookModule(L)
+	m.initBuildModule(L)
 
-	fsys := mergefs.Merge(fileSystems...)
+	// allow loading lua modules from fs.Fs (mainly for embedded files)
+	fsys := mergefs.Merge(m.fileSystems...)
 	initFsLoader(L, fsys)
 
 	return L
@@ -132,14 +152,14 @@ func openLibs(L *lua.LState) {
 
 }
 
-func initAddedGlobals(L *lua.LState) {
-	for varname, v := range luaGlobals {
+func (m *Moontpl) initAddedGlobals(L *lua.LState) {
+	for varname, v := range m.luaGlobals {
 		L.SetGlobal(varname, luar.New(L, v))
 	}
 }
 
-func initAddedModules(L *lua.LState) {
-	for moduleName, modMap := range luaModules {
+func (m *Moontpl) initAddedModules(L *lua.LState) {
+	for moduleName, modMap := range m.luaModules {
 		L.PreloadModule(moduleName, func(L *lua.LState) int {
 			mod := L.NewTable()
 
@@ -153,16 +173,16 @@ func initAddedModules(L *lua.LState) {
 	}
 }
 
-func initEnvModule(L *lua.LState, filename string) {
+func (m *Moontpl) initEnvModule(L *lua.LState, filename string) {
 	L.PreloadModule("env", func(L *lua.LState) int {
 		mod := L.NewTable()
-		pagePath := getPagePath(filename)
+		pagePath := m.getPagePath(filename)
 
 		L.SetField(mod, "PAGE_FILENAME", lua.LString(pagePath.AbsFile))
 		L.SetField(mod, "PAGE_LINK", lua.LString(pagePath.Link))
 
 		L.SetField(mod, "getPageFilenames", L.NewFunction(func(L *lua.LState) int {
-			paths := GetPageFilenames(SiteDir)
+			paths := m.GetPageFilenames(m.SiteDir)
 			var filenames []string
 			for _, p := range paths {
 				filenames = append(filenames, p.Link)
@@ -180,16 +200,16 @@ func initEnvModule(L *lua.LState, filename string) {
 			SetInternalVar(L, "recursed", lua.LTrue)
 			defer SetInternalVar(L, "recursed", lua.LNil)
 
-			if Command == CommandBuild {
-				if cachedPages == nil {
-					pages, err := GetPages(L)
+			if m.Command == CommandBuild {
+				if m.cachedPages == nil {
+					pages, err := m.GetPages(L)
 					if err != nil {
 						panic(err)
 					}
-					cachedPages = pages
+					m.cachedPages = pages
 				}
 
-				L.Push(luarFromArray(L, cachedPages))
+				L.Push(luarFromArray(L, m.cachedPages))
 				return 1
 			} else {
 				ck := "GetPages"
@@ -198,7 +218,7 @@ func initEnvModule(L *lua.LState, filename string) {
 					return 1
 				}
 
-				pages, err := GetPages(L)
+				pages, err := m.GetPages(L)
 				if err != nil {
 					panic(err)
 				}
@@ -216,17 +236,49 @@ func initEnvModule(L *lua.LState, filename string) {
 	})
 }
 
-func initPathModule(L *lua.LState, filename string) {
+func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
 	L.PreloadModule("path", func(L *lua.LState) int {
 		mod := L.NewTable()
 		L.SetField(mod, "getParams", luar.New(L, GetPathParams))
 		L.SetField(mod, "setParams", luar.New(L, SetPathParams))
 		L.SetField(mod, "hasParams", luar.New(L, HasPathParams))
 		L.SetField(mod, "relative", luar.New(L, func(targetLink string) string {
-			pagePath := getPagePath(filename)
+			pagePath := m.getPagePath(filename)
 			return RelativeFrom(targetLink, pagePath.Link)
 		}))
 
+		L.Push(mod)
+		return 1
+	})
+}
+
+func (m *Moontpl) initPageModule(L *lua.LState, pageData PageData) {
+	L.PreloadModule("page", func(L *lua.LState) int {
+		mod := L.NewTable()
+		t := pageDataToLValue(L, pageData)
+		L.SetField(mod, "params", t)
+		L.Push(mod)
+		return 1
+	})
+
+}
+
+func (m *Moontpl) initHookModule(L *lua.LState) {
+	L.PreloadModule("hook", func(L *lua.LState) int {
+		mod := L.NewTable()
+		L.SetField(mod, "onPageRender", L.NewFunction(func(L *lua.LState) int {
+			return 0
+		}))
+
+		L.Push(mod)
+		return 1
+	})
+}
+
+func (m *Moontpl) initBuildModule(L *lua.LState) {
+	L.PreloadModule("build", func(L *lua.LState) int {
+		mod := L.NewTable()
+		L.SetField(mod, "queue", luar.New(L, m.queueLink))
 		L.Push(mod)
 		return 1
 	})
@@ -254,4 +306,33 @@ func SetInternalVar(L *lua.LState, key string, val lua.LValue) {
 
 func GetInternalVar(L *lua.LState, key string) lua.LValue {
 	return L.G.Registry.RawGetString(registryPrefix + key)
+}
+
+func pageDataToLValue(L *lua.LState, data PageData) lua.LValue {
+	t := L.NewTable()
+	for k, v := range data {
+		var lv lua.LValue
+		switch v := v.(type) {
+		case int:
+			lv = lua.LNumber(v)
+		case string:
+			lv = lua.LString(v)
+		case bool:
+			lv = lua.LBool(v)
+		default:
+			lv = luar.New(L, v)
+		}
+		t.RawSetString(k, lv)
+	}
+	return t
+}
+
+func getLoadedModule(L *lua.LState, moduleName string) lua.LValue {
+	lv := L.GetField(L.GetField(L.Get(lua.EnvironIndex), "package"), "loaded")
+	if loaded, ok := lv.(*lua.LTable); !ok {
+		L.RaiseError("package.loaded must be a table")
+		return lua.LNil
+	} else {
+		return loaded.RawGetString(moduleName)
+	}
 }

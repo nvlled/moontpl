@@ -6,7 +6,4 @@ func init() {
 	// Remove default lua path
 	lua.LuaPathDefault = ""
 
-	AddFs(embedded)
-	AddLuaPath("./lua/?.lua")
-
 }
