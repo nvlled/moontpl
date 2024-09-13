@@ -17,7 +17,7 @@ type PagePath struct {
 
 type Page struct {
 	PagePath
-	Data *lua.LTable
+	Data *lua.LTable `luar:"data"`
 }
 
 func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
@@ -75,13 +75,13 @@ func getReturnedPageData(L *lua.LState, filename string) (*lua.LTable, error) {
 
 	page := getLoadedModule(L, "page").(*lua.LTable)
 
-	if data, ok := page.RawGetString("output").(*lua.LTable); ok {
+	if data, ok := page.RawGetString("data").(*lua.LTable); ok {
 		result := L.NewTable()
 		data.ForEach(func(k, v lua.LValue) {
 			result.RawSet(k, v)
 		})
 
-		page.RawSetString("output", L.NewTable())
+		page.RawSetString("data", L.NewTable())
 
 		return result, nil
 	}

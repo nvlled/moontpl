@@ -247,7 +247,7 @@ local function Node(tagName, options)
 	return setmetatable({ ctor = ctor }, ctorMeta)
 end
 
-local function findNode(root, predicate)
+local function findNodes(root, predicate)
 	local queue = {root}
 	local result = {}
 	while #queue > 0 do
@@ -427,6 +427,6 @@ end
 
 return {
 	Node = Node,
-	findNode = findNode,
+	findNodes = findNodes,
 	importGlobals = importGlobals,
 }

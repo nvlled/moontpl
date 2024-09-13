@@ -1,14 +1,44 @@
-local env = require "env"
 local mod = {}
 
--- stub functions, to be implemented by host environment
+-- PathParams is similar to query parameters of URL,
+-- but with different syntax. 
+-- example:
+--    /greet[name=yourname].html
+--    /showimage[filename=cat.jpg,size=300].html
 
-function mod.getParams(link) return {} end
+-- Gets the params of a link/filename.
+-- example:
+--   local params = path.getParams("/showimage[filename=cat.jpg,size=300].html")
+--   -- params == {filename="cat.jpg", size="300"}
+function mod.getParams(link) return {} 
+    -- stub
+    return {}
+end
 
-function mod.setParams(link) end
+-- Adds the params to a link/filename.
+-- If clear is true, then any exiting params will
+-- be removed.
+-- example:
+--   path.setParams("/page[a=1,b=2].html", {c=3,b=22})       == "/page[a=1,b=22,cc=3].html"
+--   path.setParams("/page[a=1,b=2].html", {c=3,b=22}, true) == "/page[b=22,cc=3].html"
+function mod.setParams(link, params, clear)
+    -- stub
+    return ""
+end
 
-function mod.hasParams(link) return false end
+-- Returns true if link has params.
+function mod.hasParams(link) 
+    -- stub
+    return false
+end
 
-function mod.relative(targetLink) return "" end
+-- Converts the link to a relative link (relative to current page).
+-- example:
+--   -- current page is /dir/index.html
+--   mod.relative("/file.jpg") == "../file.jpg"
+function mod.relative(targetLink)
+    -- stub
+    return ""
+end
 
 return mod

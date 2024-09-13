@@ -1,2 +1,2 @@
 require("html").importGlobals()
--- TODO: require("css").importGlobals()
+require("css").importGlobals()

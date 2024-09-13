@@ -175,7 +175,7 @@ local function _CSS_MEDIA(args, types)
     return result
 end
 
-function CSS(selector)
+local function CSS(selector)
     if type(selector) == "table" then
         local css = _CSS(selector, "")
         setmetatable(css, cssMeta)
@@ -190,7 +190,7 @@ function CSS(selector)
     end
 end
 
-function CSS_MEDIA(types)
+local function CSS_MEDIA(types)
     return function(args)
         local media = _CSS_MEDIA(args, types)
         setmetatable(media, cssMediaMeta)
@@ -198,4 +198,14 @@ function CSS_MEDIA(types)
     end
 end
 
-return CSS
+local function importGlobals()
+    _G.CSS = CSS
+    _G.CSS_MEDIA = CSS_MEDIA
+end
+
+return {
+    CSS = CSS,
+    CSS_MEDIA = CSS_MEDIA,
+    importGlobals = importGlobals,
+}
+

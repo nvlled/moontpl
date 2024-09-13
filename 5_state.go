@@ -207,8 +207,7 @@ func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
 		mod := L.NewTable()
 		pagePath := m.getPagePath(filename)
 
-		L.SetField(mod, "output", L.NewTable())
-
+		L.SetField(mod, "data", L.NewTable())
 		L.SetField(mod, "PAGE_FILENAME", lua.LString(pagePath.AbsFile))
 		L.SetField(mod, "PAGE_LINK", lua.LString(pagePath.Link))
 
@@ -225,7 +224,10 @@ func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
 
 		L.SetField(mod, "list", L.NewFunction(func(L *lua.LState) int {
 			// ignore any errors
-			pages, _ := m.GetPages()
+			pages, err := m.GetPages()
+			if err != nil {
+				panic(err)
+			}
 
 			lv := luarFromArray(L, pages)
 			L.Push(lv)
@@ -257,14 +259,6 @@ func (m *Moontpl) initBuildModule(L *lua.LState) {
 		L.Push(mod)
 		return 1
 	})
-}
-
-func getStateCache(L *lua.LState, key string) lua.LValue {
-	return GetInternalVar(L, "cache."+key)
-}
-
-func setStateCache(L *lua.LState, key string, value lua.LValue) {
-	SetInternalVar(L, "cache."+key, value)
 }
 
 func luarFromArray[T any](L *lua.LState, items []T) lua.LValue {
@@ -309,15 +303,5 @@ func getLoadedModule(L *lua.LState, moduleName string) lua.LValue {
 		return lua.LNil
 	} else {
 		return loaded.RawGetString(moduleName)
-	}
-}
-
-func getPreLoadModule(L *lua.LState, moduleName string) lua.LValue {
-	lv := L.GetField(L.GetField(L.Get(lua.EnvironIndex), "package"), "preload")
-	if preload, ok := lv.(*lua.LTable); !ok {
-		L.RaiseError("package.preload must be a table")
-		return lua.LNil
-	} else {
-		return preload.RawGetString(moduleName)
 	}
 }
