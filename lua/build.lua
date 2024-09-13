@@ -1,7 +1,5 @@
-local env = require "env"
 local mod = {}
 
-function mod.queue(link) -- stub
-end
+function mod.queue(link) end
 
 return mod

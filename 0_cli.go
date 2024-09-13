@@ -20,6 +20,8 @@ type buildCmd struct {
 	OutputDir  string `arg:"positional" help:"directory where the rendered html files will be placed" default:"output"`
 	CopyFiles  bool   `help:"copy and include static files (such as images) in the output" default:"true"`
 	CopySource bool   `help:"copy and include source lua files in the output" default:"false"`
+	Test       bool   `help:"runs only the lua files, but do not write or copy files" default:"false"`
+	Print      bool   `help:"prints the output of each file to STDOUT" default:"false"`
 }
 
 type runCmd struct {
@@ -119,29 +121,34 @@ func ExecuteCLI() {
 			outputDir := lo.Must(filepath.Abs(args.Build.OutputDir))
 			moontpl.AddLuaDir(moontpl.SiteDir)
 
-			if !isDirectory(moontpl.SiteDir) {
-				println("error: SITEDIR must be a directory")
-				os.Exit(1)
+			if !args.Build.Test {
+				if !isDirectory(moontpl.SiteDir) {
+					println("error: SITEDIR must be a directory")
+					os.Exit(1)
+				}
+
+				os.MkdirAll(outputDir, 0644)
+
+				if !isDirectory(outputDir) {
+					println("error: OUTPUTDIR must be a directory")
+					os.Exit(1)
+				}
+
+				if moontpl.SiteDir == outputDir {
+					println("error: SITEDIR and OUTPUTDIR must not be the same")
+					os.Exit(1)
+				}
+
+				if isSubDirectory(moontpl.SiteDir, outputDir) || isSubDirectory(outputDir, moontpl.SiteDir) {
+					println("error: SITEDIR and OUTPUTDIR must be subdirectories of each other")
+					println("  SITEDIR:", moontpl.SiteDir)
+					println("  OUTPUTDIR:", outputDir)
+					os.Exit(1)
+				}
 			}
 
-			os.MkdirAll(outputDir, 0644)
-
-			if !isDirectory(outputDir) {
-				println("error: OUTPUTDIR must be a directory")
-				os.Exit(1)
-			}
-
-			if moontpl.SiteDir == outputDir {
-				println("error: SITEDIR and OUTPUTDIR must not be the same")
-				os.Exit(1)
-			}
-
-			if isSubDirectory(moontpl.SiteDir, outputDir) || isSubDirectory(outputDir, moontpl.SiteDir) {
-				println("error: SITEDIR and OUTPUTDIR must be subdirectories of each other")
-				println("  SITEDIR:", moontpl.SiteDir)
-				println("  OUTPUTDIR:", outputDir)
-				os.Exit(1)
-			}
+			moontpl.builder.testBuild = args.Build.Test
+			moontpl.builder.printOutput = args.Build.Print
 
 			if err := moontpl.BuildAll(outputDir); err != nil {
 				println("error:", err.Error())

@@ -34,7 +34,12 @@ func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
 	return result
 }
 
-func (m *Moontpl) GetPages(L *lua.LState) ([]Page, error) {
+func (m *Moontpl) GetPages() ([]Page, error) {
+	L := m.createState("-", false)
+	defer L.Close()
+	// disable printing
+	L.DoString("print = function() end")
+
 	result := []Page{}
 	for _, entry := range m.GetPageFilenames(m.SiteDir) {
 		data, err := getReturnedPageData(L, entry.AbsFile)
@@ -67,16 +72,18 @@ func getReturnedPageData(L *lua.LState, filename string) (*lua.LTable, error) {
 	if err := L.DoFile(filename); err != nil {
 		return L.NewTable(), err
 	}
-	lv := L.Get(-1)
 
-	if lv.Type() != lua.LTTable {
-		return L.NewTable(), nil
-	}
+	page := getLoadedModule(L, "page").(*lua.LTable)
 
-	table := lv.(*lua.LTable)
+	if data, ok := page.RawGetString("output").(*lua.LTable); ok {
+		result := L.NewTable()
+		data.ForEach(func(k, v lua.LValue) {
+			result.RawSet(k, v)
+		})
 
-	if data, ok := table.RawGet(lua.LString("data")).(*lua.LTable); ok {
-		return data, nil
+		page.RawSetString("output", L.NewTable())
+
+		return result, nil
 	}
 
 	return L.NewTable(), nil

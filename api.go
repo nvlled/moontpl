@@ -2,8 +2,6 @@ package moontpl
 
 import (
 	"io/fs"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 var moontpl *Moontpl
@@ -44,9 +42,8 @@ func AddLuaDir(dir string) {
 	moontpl.AddLuaDir(dir)
 }
 
-func GetPages(L *lua.LState) ([]Page, error) {
-	// TODO: remove L arg
-	return moontpl.GetPages(L)
+func GetPages() ([]Page, error) {
+	return moontpl.GetPages()
 }
 
 func GetPageFilenames(baseDir string) []PagePath {

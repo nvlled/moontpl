@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -12,16 +13,16 @@ type Link string
 type Filename string
 
 type siteBuilder struct {
-	running    bool
-	done       map[Link]bool
-	buildQueue []Link
+	testBuild   bool
+	printOutput bool
+	done        map[Link]bool
+	buildQueue  []Link
 
 	copyLuaSourceFiles bool
 }
 
 func newSiteBuilder() *siteBuilder {
 	builder := &siteBuilder{
-		running:    false,
 		done:       map[Link]bool{},
 		buildQueue: []Link{},
 	}
@@ -35,7 +36,7 @@ func (m *Moontpl) createBuildState(filename string, params pathParams) *lua.LSta
 	}
 
 	L := m.createState(filename)
-	m.initPageModule(L, pageData)
+	m.SetPageData(L, pageData)
 
 	return L
 }
@@ -46,7 +47,7 @@ func (m *Moontpl) queueLink(link string) {
 	}
 }
 
-func (m *Moontpl) Build(src, dest string) error {
+func (m *Moontpl) build(src, dest string) error {
 	params, src := extractPathParams(src)
 
 	L := m.createBuildState(src, params)
@@ -62,18 +63,22 @@ func (m *Moontpl) Build(src, dest string) error {
 	}
 
 	output := L.ToStringMeta(lv).String()
-	println("----------------------------------------------------")
-	println(output)
-	println("----------------------------------------------------")
-	// TODO: write output to dest
+	if !m.builder.testBuild {
+		// TODO: write output to dest
+		println("render", src, "->", dest)
+	}
+	if m.builder.printOutput {
+		header := "---------[" + src + "]---------"
+		println(header)
+		println(output)
+		println(strings.Repeat("-", len(header)))
+		println()
+	}
 
 	return nil
 }
 
 func (m *Moontpl) BuildAll(outputDir string) error {
-	m.builder.running = true
-	defer func() { m.builder.running = false }()
-
 	for _, p := range m.GetPageFilenames(m.SiteDir) {
 		m.queueLink(p.Link)
 	}
@@ -89,16 +94,17 @@ func (m *Moontpl) BuildAll(outputDir string) error {
 		src := filepath.Join(m.SiteDir, string(linkWithParams)+".lua")
 		dest := filepath.Join(outputDir, string(linkWithParams))
 
-		println("render", src, "->", dest)
-		if err := m.Build(src, dest); err != nil {
+		if err := m.build(src, dest); err != nil {
 			panic(err)
 		}
 
 		m.builder.done[linkWithParams] = true
 	}
 
-	if err := m.CopyNonSourceFiles(m.SiteDir, outputDir); err != nil {
-		return err
+	if !m.builder.testBuild {
+		if err := m.CopyNonSourceFiles(m.SiteDir, outputDir); err != nil {
+			return err
+		}
 	}
 
 	return nil
