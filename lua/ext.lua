@@ -20,6 +20,18 @@ function P.isEmptyString(str)
     return not str or str == ""
 end
 
+function P.rep(str, n)
+    if type(n) ~= "number" then 
+        error("repeat second parameter must be a number")
+    end
+
+    local result = {}
+    for i = 1, n do
+        table.insert(result, str)
+    end
+    return table.concat(result, "")
+end
+
 function P.relativePath(targetPath, srcPath)
     if targetPath:sub(1, 1) ~= "/" or not srcPath or srcPath == "" then
         return targetPath
@@ -47,6 +59,12 @@ function P.filter(t, pred)
         end
     end
     return result
+end
+
+function P.each(xs, fn)
+    for i, v in pairs(t) do
+        fn(v, i)
+    end
 end
 
 function P.map(t, fn)
@@ -153,6 +171,21 @@ function P.parseDateTime(dateTimeStr)
         year = year, month = month, day = day,
         hour = hour, min = min, sec = sec
     }
+end
+
+function P.indent(str, numSpaces)
+    if not numSpaces then
+        numSpaces = 1
+    end
+    local result = {}
+    for line in str:gmatch '[^\n]+' do
+        for i = 1, numSpaces do
+            table.insert(result, " ")
+        end
+        table.insert(result, line)
+        table.insert(result, "\n")
+    end
+    return table.concat(result, "")
 end
 
 return P

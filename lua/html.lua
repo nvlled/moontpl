@@ -1,10 +1,10 @@
-local ext = require("ext")
+local ext = require "ext"
 
 local ctorMeta
 local nodeMeta
 
 local function trim(s)
-	return s:match("^%s*(.-)%s*$")
+	return s:match "^%s*(.-)%s*$"
 end
 
 local function tableLen(t)
@@ -206,7 +206,7 @@ local function _node(tagName, args, options)
 				elseif mt and mt.__tostring then
 					table.insert(children, tostring(v))
 				else
-					error("plain table cannot be a child node")
+					error "plain table cannot be a child node"
 				end
 			elseif v then
 				table.insert(children, tostring(v))
@@ -214,7 +214,7 @@ local function _node(tagName, args, options)
 		end
 	end
 
-	local result = { tag = tagName, attrs = attrs, children = children, options = options, data=data }
+	local result = { tag = tagName, attrs = attrs, children = children, options = options, data = data }
 	setmetatable(result, nodeMeta)
 
 	return result
@@ -239,7 +239,7 @@ local function Node(tagName, options)
 	local ctor = function(args)
 		args = args or {}
 		if getmetatable(args) == ctorMeta then
-			args = args({})
+			args = args {}
 		end
 		local result = _node(tagName, args, options)
 		return result
@@ -248,7 +248,7 @@ local function Node(tagName, options)
 end
 
 local function findNodes(root, predicate)
-	local queue = {root}
+	local queue = { root }
 	local result = {}
 	while #queue > 0 do
 		local node = table.remove(queue)
@@ -265,168 +265,174 @@ end
 local function importGlobals()
 	HTML = Node("html", { prefix = "<!DOCTYPE html>" })
 
-	HEAD = Node("head")
-	TITLE = Node("title")
-	BODY = Node("body")
+	HEAD = Node "head"
+	TITLE = Node "title"
+	BODY = Node "body"
 	SCRIPT = Node("script", { noHTMLEscape = true })
-	LINK = Node("link", { selfClosing = true })
+	LINK = Node("link", { selfClosing = false })
 	STYLE = Node("style", { noHTMLEscape = true })
 	META = Node("meta", { selfClosing = true })
 
-	A = Node("a")
+	A = Node "a"
 	BASE = Node("base", { selfClosing = true })
 
-	P = Node("p")
-	DIV = Node("div")
-	SPAN = Node("span")
+	P = Node "p"
+	DIV = Node "div"
+	SPAN = Node "span"
 
-	DETAILS = Node("details")
-	SUMMARY = Node("summary")
+	DETAILS = Node "details"
+	SUMMARY = Node "summary"
 
-	B = Node("b")
-	I = Node("i")
-	EM = Node("em")
-	STRONG = Node("strong")
-	SMALL = Node("small")
-	S = Node("s")
-	PRE = Node("pre")
-	CODE = Node("code")
+	B = Node "b"
+	I = Node "i"
+	EM = Node "em"
+	STRONG = Node "strong"
+	SMALL = Node "small"
+	S = Node "s"
+	PRE = Node "pre"
+	CODE = Node "code"
+	BLOCKQUOTE = Node "blockquote"
 
-	OL = Node("ol")
-	UL = Node("ul")
-	LI = Node("li")
+	OL = Node "ol"
+	UL = Node "ul"
+	LI = Node "li"
 
-	FORM = Node("form")
+	FORM = Node "form"
 	INPUT = Node("input", { selfClosing = true })
-	TEXTAREA = Node("textarea")
-	BUTTON = Node("button")
-	LABEL = Node("label")
-	SELECT = Node("select")
-	OPTION = Node("option")
+	TEXTAREA = Node "textarea"
+	BUTTON = Node "button"
+	LABEL = Node "label"
+	SELECT = Node "select"
+	OPTION = Node "option"
 
-	TABLE = Node("table")
-	THEAD = Node("thead")
-	TBODY = Node("tbody")
+	TABLE = Node "table"
+	THEAD = Node "thead"
+	TBODY = Node "tbody"
 	COL = Node("col", { selfClosing = true })
-	TR = Node("tr")
-	TD = Node("td")
+	TR = Node "tr"
+	TD = Node "td"
 
-	SVG = Node("svg")
+	SVG = Node "svg"
 
 	BR = Node("br", { selfClosing = true })
 	HR = Node("hr", { selfClosing = true })
 
-	H1 = Node("h1")
-	H2 = Node("h2")
-	H3 = Node("h3")
-	H4 = Node("h4")
-	H5 = Node("h5")
-	H6 = Node("h6")
+	H1 = Node "h1"
+	H2 = Node "h2"
+	H3 = Node "h3"
+	H4 = Node "h4"
+	H5 = Node "h5"
+	H6 = Node "h6"
 
 	IMG = Node("img", { selfClosing = true })
 	AREA = Node("area", { selfClosing = true })
 
-	VIDEO = Node("video")
-	IFRAME = Node("iframe")
+	VIDEO = Node "video"
+	IFRAME = Node "iframe"
 	EMBED = Node("embed", { selfClosing = true })
 	TRACK = Node("track", { selfClosing = true })
 	SOURCE = Node("source", { selfClosing = true })
 
-	FRAGMENT = Node("")
+	FRAGMENT = Node ""
 end
 
---[[
-local ppMeta
-ppMeta = {
-    __div = function(a, b)
-        if type(a) == "function" then
-            a = a()
-        end
+function toMarkdown(node, parent, level)
+	if not level then
+		level = 0
+	end
+	if not node then
+		return ""
+	end
 
-        local function f(x)
-            if #a.children == 0 then
-                table.insert(a.children, x)
-            else
-                table.insert(
-                    a.children[#a.children].children, x
-                )
-            end
-        end
+	local function getBody()
+		return table.concat(
+			ext.map(node.children, function(sub)
+				if type(sub) == "string" then
+					return sub
+				elseif not sub then
+					return ""
+				end
+				return toMarkdown(sub, node)
+			end),
+			""
+		)
+	end
 
-        b = type(b) == "function" and b() or b
-        if type(b) == "string" then
-            local c = PP(b)
+	if node.tag == "" then
+		return "\n\n" .. getBody() .. "\n\n"
+	elseif node.tag == "br" then
+		return "\n"
+	elseif node.tag == "p" or node.tag == "div" then
+		return getBody() .. "\n\n"
+	elseif node.tag == "h1" then
+		return "# " .. getBody() .. "\n\n"
+	elseif node.tag == "h2" then
+		return "## " .. getBody() .. "\n\n"
+	elseif node.tag == "h3" then
+		return "### " .. getBody() .. "\n\n"
+	elseif node.tag == "h4" then
+		return "#### " .. getBody() .. "\n\n"
+	elseif node.tag == "h5" then
+		return "##### " .. getBody() .. "\n\n"
+	elseif node.tag == "h6" then
+		return "######" .. getBody() .. "\n\n"
+	elseif node.tag == "strong" or node.tag == "b" then
+		return "**" .. getBody() .. "**"
+	elseif node.tag == "em" or node.tag == "i" then
+		return "*" .. getBody() .. "*"
+	elseif node.tag == "blockquote" then
+		return "> " .. getBody()
+	elseif node.tag == "li" then
+		local result = ext.map(node.children, function(sub, i)
+			if sub.tag == "ul" then
+				return "\n" .. ext.indent(toMarkdown(sub, node, level + 1), level * 3)
+			else
+				if i > 1 and node.children[i - 1].tag == "ul" then
+					return ext.indent(toMarkdown(sub, node, level + 1), level * 3)
+				else
+					return toMarkdown(sub, node, level + 1) .. " "
+				end
+			end
+		end)
+		return table.concat(result, "")
+	elseif node.tag == "ul" or node.tag == "ol" then
+		local ordered = node.tag == "ol"
+		local result = ext.map(node.children, function(sub, i)
+			if sub.tag == "li" then
+				local prefix = ""
+				if i > 1 and node.children[i - 1].tag ~= "li" then
+					prefix = "\n"
+				end
+				local dash = ordered and "1. " or "-  "
+				return prefix .. dash .. toMarkdown(sub, node, level + 1) .. "\n"
+			else
+				return toMarkdown(sub, node, level + 1) .. (i < #node.children and " " or "")
+			end
+		end)
+		return "\n" .. table.concat(result, "")
+	elseif node.tag == "img" then
+		return "![" .. node.attrs.alt .. "](" .. node.attrs.src .. ")"
+	elseif node.tag == "code" then
+		return "`" .. getBody() .. "`"
+	elseif node.tag == "pre" then
+		if #node.children == 1 and node.children[0].tag == "code" then
+			return "```\n" .. getBody() .. "\n````"
+		else
+			return getBody()
+		end
+	elseif node.tag == "hr" then
+		return "\n***\n\n"
+	elseif node.tag == "a" then
+		local title = node.attrs.title and ' "' .. node.attrs.title .. '"' or ""
+		return "[" .. getBody() .. "](" .. node.attrs.href .. title .. ")"
+	end
 
-            for _, z in ipairs(c.children[1].children) do
-                f(z)
-            end
-
-            for i = 2, #c.children do
-                appendChild(a, c.children[i])
-            end
-
-            return a
-        end
-
-        f(b)
-
-
-        return a
-    end,
-    __pow = function(a, b) return nodeMeta.__pow(a, b) end,
-    __tostring = function(x) return nodeMeta.__tostring(x) end,
-    __textContent = function(x) return nodeMeta.__textContent(x) end,
-}
-function PP(args)
-    if type(args) == "string" then
-        local result = {}
-        for block in ext.split(args, "\n\n") do
-            if block == "" or not block then
-                table.insert(result, BR {})
-            else
-                table.insert(result, P(block))
-            end
-        end
-        local frag = FRAGMENT(result)
-
-        return setmetatable(frag, ppMeta)
-    end
-
-    local p = P {}
-    local result = { p }
-    for _, arg in ipairs(args) do
-        if type(arg) ~= "string" then
-            table.insert(p.children, arg)
-        else
-            local i = 1
-            for block in ext.split(arg, "\n\n") do
-                if i == 1 then
-                    table.insert(p.children, block)
-                    goto continue
-                end
-
-                if block == "" or not block then
-                    table.insert(p.children, BR {})
-                else
-                    p = P {}
-                    table.insert(result, p)
-                    table.insert(p.children, block)
-                end
-
-                ::continue::
-                i = i + 1
-            end
-        end
-    end
-
-    local frag = FRAGMENT(result)
-
-    return setmetatable(frag, ppMeta)
+	return tostring(node)
 end
---]]
 
 return {
 	Node = Node,
 	findNodes = findNodes,
+	toMarkdown = toMarkdown,
 	importGlobals = importGlobals,
 }
