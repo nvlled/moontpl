@@ -17,6 +17,7 @@ func (m *Moontpl) Serve(addr string) {
 		Handler: m.createHTTPHandler(),
 	}
 
+	log.Printf("server listening at http://%s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}

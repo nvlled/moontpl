@@ -1,7 +1,9 @@
 package moontpl
 
 import (
+	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,9 +66,11 @@ func (m *Moontpl) build(src, dest string) error {
 
 	output := L.ToStringMeta(lv).String()
 	if !m.builder.testBuild {
-		println("render", src, "->", dest)
+		log.Print("exec ", mustRel(mustGetwd(), src), " -> ", mustRel(mustGetwd(), dest))
 
+		// ignore error
 		os.MkdirAll(filepath.Dir(dest), 0755)
+
 		if err := os.WriteFile(dest, []byte(output), 0644); err != nil {
 			panic(err)
 		}
@@ -84,6 +88,8 @@ func (m *Moontpl) build(src, dest string) error {
 }
 
 func (m *Moontpl) BuildAll(outputDir string) error {
+	defer func() { m.builder.done = map[Link]bool{} }()
+
 	for _, p := range m.GetPageFilenames(m.SiteDir) {
 		m.queueLink(p.Link)
 	}
@@ -106,6 +112,21 @@ func (m *Moontpl) BuildAll(outputDir string) error {
 		m.builder.done[linkWithParams] = true
 	}
 
+	for _, p := range m.getNonHtmlLuaFilenames(m.SiteDir) {
+		src := filepath.Join(m.SiteDir, string(p.Link)+".lua")
+		dest := filepath.Join(outputDir, string(p.Link))
+
+		// Build only files with extension such as .css.lua,
+		// skip .lua  files since they could be just regular modules.
+		if filepath.Ext(dest) == "" {
+			continue
+		}
+
+		if err := m.build(src, dest); err != nil {
+			panic(err)
+		}
+	}
+
 	if !m.builder.testBuild {
 		if err := m.CopyNonSourceFiles(m.SiteDir, outputDir); err != nil {
 			return err
@@ -126,7 +147,31 @@ func (m *Moontpl) CopyNonSourceFiles(srcDir, destDir string) error {
 		if filepath.Ext(p) == ".lua" && !m.builder.copyLuaSourceFiles {
 			return nil
 		}
-		println("copy  ", filepath.Join(srcDir, p), "->", filepath.Join(destDir, p))
-		return nil
+
+		src := filepath.Join(srcDir, p)
+		dest := filepath.Join(destDir, p)
+
+		// ignore error
+		_ = os.MkdirAll(filepath.Dir(dest), 0755)
+
+		log.Print("copy ", mustRel(mustGetwd(), src), " -> ", mustRel(mustGetwd(), dest))
+
+		inputFile, err := os.Open(src)
+		if err != nil {
+			return err
+		}
+		defer inputFile.Close()
+
+		outputFile, err := os.Create(dest)
+		if err != nil {
+			return err
+		}
+		defer outputFile.Close()
+
+		if _, err = io.Copy(outputFile, inputFile); err != nil {
+			return err
+		}
+
+		return inputFile.Sync()
 	})
 }

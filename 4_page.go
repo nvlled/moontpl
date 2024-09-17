@@ -20,6 +20,20 @@ type Page struct {
 	Data *lua.LTable `luar:"data"`
 }
 
+func (m *Moontpl) getNonHtmlLuaFilenames(baseDir string) []PagePath {
+	var result []PagePath
+	filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if filepath.Ext(filename) == ".lua" && wholeExt(filename) != ".html.lua" {
+			result = append(result, m.getPagePath(filename))
+		}
+		return nil
+	})
+	return result
+}
+
 func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
 	var result []PagePath
 	filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {

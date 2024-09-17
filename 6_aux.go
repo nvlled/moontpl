@@ -84,3 +84,21 @@ func apply2[A, B, C any](x A, f1 func(A) B, f2 func(B) C) C {
 func apply3[A, B, C, D any](x A, f1 func(A) B, f2 func(B) C, f3 func(C) D) D {
 	return f3(f2(f1(x)))
 }
+
+// Similar to filepath.Ext, but returns the whole file extension.
+// Example:
+//
+//	wholeExt("/dir/filename.html.lua")     == ".html.lua"
+//	filepath.Ext("/dir/filename.html.lua") == ".lua"
+func wholeExt(path string) string {
+	foundIndex := -1
+	for i := len(path) - 1; i >= 0 && !os.IsPathSeparator(path[i]); i-- {
+		if path[i] == '.' {
+			foundIndex = i
+		}
+	}
+	if foundIndex >= 0 {
+		return path[foundIndex:]
+	}
+	return ""
+}
