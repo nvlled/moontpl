@@ -74,3 +74,13 @@ func respondInternalError(w http.ResponseWriter, err error) {
 	log.Print(err)
 	debug.PrintStack()
 }
+
+func apply1[A, B any](x A, f1 func(A) B) B {
+	return f1(x)
+}
+func apply2[A, B, C any](x A, f1 func(A) B, f2 func(B) C) C {
+	return f2(f1(x))
+}
+func apply3[A, B, C, D any](x A, f1 func(A) B, f2 func(B) C, f3 func(C) D) D {
+	return f3(f2(f1(x)))
+}

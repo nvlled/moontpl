@@ -23,7 +23,6 @@ local function cssToString(ruleset)
     local buffer = {}
     local n = #ruleset
 
-
     for _, rule in ipairs(ruleset) do
         if not rule or rule.selector == "" or ext.len(rule.declarations) == 0 then
             goto continue

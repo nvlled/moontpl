@@ -3,9 +3,11 @@ package moontpl
 import (
 	"errors"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -51,14 +53,15 @@ func (m *Moontpl) createHTTPHandler() http.Handler {
 			return
 		}
 
-		log.Println("render lua:", filename)
-
 		output, err := m.RenderFile(filename)
 		if err != nil {
 			respondInternalError(w, err)
 			return
 		}
 
+		ext := apply2(strings.TrimSuffix(filename, ".lua"), filepath.Ext, mime.TypeByExtension)
+
+		w.Header().Add("Content-Type", ext)
 		w.Write([]byte(output))
 	})
 }
