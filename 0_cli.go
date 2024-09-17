@@ -127,7 +127,7 @@ func ExecuteCLI() {
 					os.Exit(1)
 				}
 
-				os.MkdirAll(outputDir, 0644)
+				os.MkdirAll(outputDir, 0755)
 
 				if !isDirectory(outputDir) {
 					println("error: OUTPUTDIR must be a directory")

@@ -64,9 +64,14 @@ func (m *Moontpl) build(src, dest string) error {
 
 	output := L.ToStringMeta(lv).String()
 	if !m.builder.testBuild {
-		// TODO: write output to dest
 		println("render", src, "->", dest)
+
+		os.MkdirAll(filepath.Dir(dest), 0755)
+		if err := os.WriteFile(dest, []byte(output), 0644); err != nil {
+			panic(err)
+		}
 	}
+
 	if m.builder.printOutput {
 		header := "---------[" + src + "]---------"
 		println(header)
