@@ -1,4 +1,4 @@
-local mod = {}
+local path = {}
 
 -- PathParams is similar to query parameters of URL,
 -- but with different syntax. 
@@ -10,7 +10,7 @@ local mod = {}
 -- example:
 --   local params = path.getParams("/showimage[filename=cat.jpg,size=300].html")
 --   -- params == {filename="cat.jpg", size="300"}
-function mod.getParams(link) return {} 
+function path.getParams(link) return {} 
     -- stub
     return {}
 end
@@ -21,13 +21,13 @@ end
 -- example:
 --   path.setParams("/page[a=1,b=2].html", {c=3,b=22})       == "/page[a=1,b=22,cc=3].html"
 --   path.setParams("/page[a=1,b=2].html", {c=3,b=22}, true) == "/page[b=22,cc=3].html"
-function mod.setParams(link, params, clear)
+function path.setParams(link, params, clear)
     -- stub
     return ""
 end
 
 -- Returns true if link has params.
-function mod.hasParams(link) 
+function path.hasParams(link) 
     -- stub
     return false
 end
@@ -35,10 +35,10 @@ end
 -- Converts the link to a relative link (relative to current page).
 -- example:
 --   -- current page is /dir/index.html
---   mod.relative("/file.jpg") == "../file.jpg"
-function mod.relative(targetLink)
+--   path.relative("/file.jpg") == "../file.jpg"
+function path.relative(targetLink)
     -- stub
     return ""
 end
 
-return mod
+return path
