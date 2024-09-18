@@ -1,16 +1,40 @@
 package moontpl
 
-import lua "github.com/yuin/gopher-lua"
+import (
+	"github.com/yosssi/gohtml"
+	lua "github.com/yuin/gopher-lua"
+)
 
 func (m *Moontpl) RenderFile(filename string) (string, error) {
+	var pageData PageData
+
+	if hasPathParams(filename) {
+		var params pathParams
+		params, filename = extractPathParams(filename)
+		pageData = PageData{}
+		for k, v := range params {
+			pageData[k] = v
+		}
+	}
+
 	L := m.createState(filename)
 	defer L.Close()
+
+	if pageData != nil {
+		m.SetPageData(L, pageData)
+	}
 
 	lv, err := m.renderFile(L, filename)
 	if err != nil {
 		return "", err
 	}
-	return L.ToStringMeta(lv).String(), nil
+
+	output := L.ToStringMeta(lv).String()
+	if wholeExt(filename) == ".html.lua" {
+		output = gohtml.Format(output)
+	}
+
+	return output, nil
 }
 
 func (m *Moontpl) RenderString(luaCode string) (string, error) {
@@ -24,6 +48,7 @@ func (m *Moontpl) RenderString(luaCode string) (string, error) {
 	if lv.Type() == lua.LTNil {
 		return "", nil
 	}
+
 	return L.ToStringMeta(lv).String(), nil
 }
 

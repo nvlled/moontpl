@@ -3,6 +3,9 @@ local P = {}
 function P.trim(s)
     return s:match("^%s*(.-)%s*$")
 end
+function P.trimRight(s)
+    return s:match("(.-)%s*$")
+end
 
 function P.dirPath(path)
     local i = 1

@@ -36,7 +36,16 @@ end
 -- example:
 --   -- current page is /dir/index.html
 --   path.relative("/file.jpg") == "../file.jpg"
-function path.relative(targetLink)
+function path.relative(link)
+    -- stub
+    return ""
+end
+
+-- Converts the link to absolute link
+-- example:
+--   -- current page is /dir/index.html
+--   path.absolute("./file.jpg") == "/dir/file.jpg"
+function path.absolute(link)
     -- stub
     return ""
 end

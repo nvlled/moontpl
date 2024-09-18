@@ -181,9 +181,28 @@ func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
 		L.SetField(mod, "getParams", luar.New(L, getPathParams))
 		L.SetField(mod, "setParams", luar.New(L, SetPathParams))
 		L.SetField(mod, "hasParams", luar.New(L, hasPathParams))
-		L.SetField(mod, "relative", luar.New(L, func(targetLink string) string {
+
+		L.SetField(mod, "absolute", L.NewFunction(func(L *lua.LState) int {
+			targetLink := L.CheckString(1)
 			pagePath := m.getPagePath(filename)
-			return relativeFrom(targetLink, pagePath.Link)
+			L.Push(lua.LString(relativeFrom(targetLink, pagePath.Link)))
+			return 1
+		}))
+
+		L.SetField(mod, "absolute", L.NewFunction(func(L *lua.LState) int {
+			link := L.CheckString(1)
+			if link[0] == '/' {
+				L.Push(lua.LString(link))
+				return 1
+			}
+			pagePath := m.getPagePath(filename)
+			result := path.Dir(pagePath.Link)
+			result = path.Join(result, link)
+			result = path.Clean(result)
+
+			L.Push(lua.LString(result))
+
+			return 1
 		}))
 
 		L.Push(mod)
@@ -207,6 +226,7 @@ func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
 		mod := L.NewTable()
 		pagePath := m.getPagePath(filename)
 
+		L.SetField(mod, "input", L.NewTable())
 		L.SetField(mod, "data", L.NewTable())
 		L.SetField(mod, "PAGE_FILENAME", lua.LString(pagePath.AbsFile))
 		L.SetField(mod, "PAGE_LINK", lua.LString(pagePath.Link))

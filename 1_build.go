@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/yosssi/gohtml"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -65,11 +66,15 @@ func (m *Moontpl) build(src, dest string) error {
 	}
 
 	output := L.ToStringMeta(lv).String()
+	if filepath.Ext(dest) == ".html" {
+		output = gohtml.Format(output)
+	}
+
 	if !m.builder.testBuild {
 		log.Print("exec ", mustRel(mustGetwd(), src), " -> ", mustRel(mustGetwd(), dest))
 
 		// ignore error
-		os.MkdirAll(filepath.Dir(dest), 0755)
+		_ = os.MkdirAll(filepath.Dir(dest), 0755)
 
 		if err := os.WriteFile(dest, []byte(output), 0644); err != nil {
 			panic(err)

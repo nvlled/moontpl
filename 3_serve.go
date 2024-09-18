@@ -47,7 +47,7 @@ func (m *Moontpl) createHTTPHandler() http.Handler {
 			filename += ".lua"
 		}
 
-		if !fsExists(filename) {
+		if filepath.Ext(filename) == ".lua" && !fsExists(filename) && !hasPathParams(filename) {
 			r.URL.Path = path.Join("/", r.URL.Path)
 			log.Println("serve file:", r.URL.Path)
 			pageDir.ServeHTTP(w, r)
