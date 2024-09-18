@@ -6,27 +6,16 @@ import (
 )
 
 func (m *Moontpl) RenderFile(filename string) (string, error) {
-	var pageData PageData
-
-	if hasPathParams(filename) {
-		var params pathParams
-		params, filename = extractPathParams(filename)
-		pageData = PageData{}
-		for k, v := range params {
-			pageData[k] = v
-		}
-	}
-
 	L := m.createState(filename)
 	defer L.Close()
-
-	if pageData != nil {
-		m.SetPageData(L, pageData)
-	}
 
 	lv, err := m.renderFile(L, filename)
 	if err != nil {
 		return "", err
+	}
+
+	if lv.Type() == lua.LTNil {
+		return "", nil
 	}
 
 	output := L.ToStringMeta(lv).String()
@@ -53,6 +42,16 @@ func (m *Moontpl) RenderString(luaCode string) (string, error) {
 }
 
 func (m *Moontpl) renderFile(L *lua.LState, filename string) (lua.LValue, error) {
+	if hasPathParams(filename) {
+		var params pathParams
+		params, filename = extractPathParams(filename)
+		pageData := PageData{}
+		for k, v := range params {
+			pageData[k] = v
+		}
+		m.SetPageData(L, pageData)
+	}
+
 	if err := L.DoFile(filename); err != nil {
 		return lua.LNil, err
 	}

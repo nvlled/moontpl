@@ -70,6 +70,17 @@ function P.each(xs, fn)
     end
 end
 
+function P.sortedIter(m, fn)
+    local keys = {}
+    for k in pairs(m) do
+        table.insert(keys, k)
+    end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        fn(m[k], k)
+    end
+end
+
 function P.map(t, fn)
     local result = {}
     for i, v in pairs(t) do

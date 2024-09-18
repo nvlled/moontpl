@@ -44,7 +44,7 @@ func TestSetPathParams(t *testing.T) {
 		{"/test", pathParams{}, "/test"},
 		{"/test[x=1,y=2].html", pathParams{"x": "3"}, "/test[x=3,y=2].html"},
 	} {
-		filename := SetPathParams(entry.input, entry.params)
+		filename := setPathParams(entry.input, entry.params)
 		if filename != entry.expected {
 			t.Errorf("expected: %v, got %v", entry.expected, filename)
 		}

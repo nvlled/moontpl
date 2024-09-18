@@ -54,6 +54,7 @@ func (m *Moontpl) createHTTPHandler() http.Handler {
 			return
 		}
 
+		log.Println("run file:", filename)
 		output, err := m.RenderFile(filename)
 		if err != nil {
 			respondInternalError(w, err)

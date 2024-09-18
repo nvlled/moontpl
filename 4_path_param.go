@@ -48,7 +48,7 @@ func extractPathParams(filename string) (pathParams, string) {
 	return result, re.ReplaceAllString(filename, "")
 }
 
-func SetPathParams(filename string, params pathParams) string {
+func setPathParams(filename string, params pathParams) string {
 	if len(params) == 0 {
 		return filename
 	}

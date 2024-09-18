@@ -179,7 +179,7 @@ func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
 	L.PreloadModule("path", func(L *lua.LState) int {
 		mod := L.NewTable()
 		L.SetField(mod, "getParams", luar.New(L, getPathParams))
-		L.SetField(mod, "setParams", luar.New(L, SetPathParams))
+		L.SetField(mod, "setParams", luar.New(L, setPathParams))
 		L.SetField(mod, "hasParams", luar.New(L, hasPathParams))
 
 		L.SetField(mod, "absolute", L.NewFunction(func(L *lua.LState) int {

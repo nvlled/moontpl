@@ -7,9 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/yosssi/gohtml"
-	lua "github.com/yuin/gopher-lua"
 )
 
 type Link string
@@ -32,18 +29,6 @@ func newSiteBuilder() *siteBuilder {
 	return builder
 }
 
-func (m *Moontpl) createBuildState(filename string, params pathParams) *lua.LState {
-	pageData := PageData{}
-	for k, v := range params {
-		pageData[k] = v
-	}
-
-	L := m.createState(filename)
-	m.SetPageData(L, pageData)
-
-	return L
-}
-
 func (m *Moontpl) queueLink(link string) {
 	if !m.builder.done[Link(link)] {
 		m.builder.buildQueue = append(m.builder.buildQueue, Link(link))
@@ -51,23 +36,12 @@ func (m *Moontpl) queueLink(link string) {
 }
 
 func (m *Moontpl) build(src, dest string) error {
-	params, src := extractPathParams(src)
-
-	L := m.createBuildState(src, params)
+	L := m.createState(src)
 	defer L.Close()
 
-	lv, err := m.renderFile(L, src)
+	output, err := m.RenderFile(src)
 	if err != nil {
 		return err
-	}
-
-	if lv.Type() == lua.LTNil {
-		return nil
-	}
-
-	output := L.ToStringMeta(lv).String()
-	if filepath.Ext(dest) == ".html" {
-		output = gohtml.Format(output)
 	}
 
 	if !m.builder.testBuild {
@@ -93,7 +67,7 @@ func (m *Moontpl) build(src, dest string) error {
 }
 
 func (m *Moontpl) BuildAll(outputDir string) error {
-	defer func() { m.builder.done = map[Link]bool{} }()
+	defer clear(m.builder.done)
 
 	for _, p := range m.GetPageFilenames(m.SiteDir) {
 		m.queueLink(p.Link)
