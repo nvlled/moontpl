@@ -398,13 +398,12 @@ function toMarkdown(node, parent, level)
 	elseif node.tag == "img" then
 		return "![" .. node.attrs.alt .. "](" .. node.attrs.src .. ")"
 	elseif node.tag == "code" then
+		if parent and parent.tag == "pre" then
+			return "```\n" .. ext.trimRight(getBody()) .. "\n````\n"
+		end
 		return "`" .. getBody() .. "`"
 	elseif node.tag == "pre" then
-		if #node.children == 1 and node.children[0].tag == "code" then
-			return "```\n" .. getBody() .. "\n````"
-		else
-			return getBody()
-		end
+		return getBody()
 	elseif node.tag == "hr" then
 		return "\n***\n\n"
 	elseif node.tag == "a" then
