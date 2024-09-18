@@ -247,21 +247,6 @@ local function Node(tagName, options)
 	return setmetatable({ ctor = ctor }, ctorMeta)
 end
 
-local function findNodes(root, predicate)
-	local queue = { root }
-	local result = {}
-	while #queue > 0 do
-		local node = table.remove(queue)
-		if predicate(node) then
-			table.insert(node)
-		end
-		for _, child in ipairs(node.children) do
-			table.insert(queue, child)
-		end
-	end
-	return result
-end
-
 local function importGlobals()
 	HTML = Node("html", { prefix = "<!DOCTYPE html>" })
 
@@ -432,7 +417,6 @@ end
 
 return {
 	Node = Node,
-	findNodes = findNodes,
 	toMarkdown = toMarkdown,
 	importGlobals = importGlobals,
 }
