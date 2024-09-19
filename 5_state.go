@@ -1,7 +1,6 @@
 package moontpl
 
 import (
-	"fmt"
 	"io/fs"
 	"path"
 	"strings"
@@ -29,6 +28,7 @@ type Moontpl struct {
 	luaGlobals  map[string]any
 	fileSystems []fs.FS
 	cachedPages []Page
+	runtags     map[string]struct{}
 
 	builder   *siteBuilder
 	fsWatcher *FsWatcher
@@ -45,6 +45,7 @@ func New() *Moontpl {
 		luaGlobals:  map[string]any{},
 		fileSystems: []fs.FS{},
 		cachedPages: []Page{},
+		runtags:     make(map[string]struct{}),
 
 		builder:   newSiteBuilder(),
 		fsWatcher: newFsWatcher(),
@@ -92,6 +93,29 @@ func (m *Moontpl) AddLuaDir(dir string) {
 	m.AddLuaPath(path.Join(dir, "?.lua"))
 }
 
+func (m *Moontpl) SetPageData(L *lua.LState, pageData PageData) {
+	// make sure page module is loaded
+	L.DoString(`require "page"`)
+
+	mod := getLoadedModule(L, "page")
+	if mod != lua.LNil {
+		t := pageDataToLValue(L, pageData)
+		L.SetField(mod, "input", t)
+	}
+}
+
+func (m *Moontpl) AddRunTags(tags ...string) {
+	for _, t := range tags {
+		m.runtags[t] = struct{}{}
+	}
+}
+
+func (m *Moontpl) RemoveRunTags(tags ...string) {
+	for _, t := range tags {
+		delete(m.runtags, t)
+	}
+}
+
 func (m *Moontpl) createState(filename string, initModules ...bool /* = true */) *lua.LState {
 	L := lua.NewState(lua.Options{
 		SkipOpenLibs: true,
@@ -106,6 +130,7 @@ func (m *Moontpl) createState(filename string, initModules ...bool /* = true */)
 		m.initPathModule(L, filename)
 		m.initHookModule(L)
 		m.initBuildModule(L)
+		m.initTagsModule(L)
 	}
 
 	// allow loading lua modules from fs.Fs (mainly for embedded files)
@@ -250,6 +275,18 @@ func (m *Moontpl) initBuildModule(L *lua.LState) {
 	L.PreloadModule("build", func(L *lua.LState) int {
 		mod := L.NewTable()
 		L.SetField(mod, "queue", luar.New(L, m.queueLink))
+		L.Push(mod)
+		return 1
+	})
+}
+
+func (m *Moontpl) initTagsModule(L *lua.LState) {
+	L.PreloadModule("runtags", func(L *lua.LState) int {
+		mod := L.NewTable()
+		for k := range m.runtags {
+			L.SetField(mod, k, lua.LTrue)
+		}
+
 		L.Push(mod)
 		return 1
 	})

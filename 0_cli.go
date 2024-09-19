@@ -48,6 +48,7 @@ type cliArgs struct {
 	Serve *serveCmd `arg:"subcommand:serve"`
 
 	LuaDir []string `arg:"-l,separate" help:"directories where to find lua files with require(), automatically includes SITEDIR"`
+	RunTag []string `arg:"-l,separate" help:"runtime tags to include in the lua environment"`
 }
 
 var args cliArgs
@@ -105,6 +106,7 @@ func ExecuteCLI() {
 			}
 
 			moontpl.AddLuaPath(fmt.Sprintf("%s/?.lua", moontpl.SiteDir))
+			moontpl.AddRunTags("run")
 			output, err := moontpl.RenderFile(args.Run.Filename)
 
 			if err != nil {
@@ -118,8 +120,10 @@ func ExecuteCLI() {
 		{
 			moontpl.Command = CommandBuild
 			moontpl.SiteDir = lo.Must(filepath.Abs(args.Build.SiteDir))
-			outputDir := lo.Must(filepath.Abs(args.Build.OutputDir))
 			moontpl.AddLuaDir(moontpl.SiteDir)
+			moontpl.AddRunTags("build")
+
+			outputDir := lo.Must(filepath.Abs(args.Build.OutputDir))
 
 			if !args.Build.Test {
 				if !isDirectory(moontpl.SiteDir) {
@@ -160,6 +164,13 @@ func ExecuteCLI() {
 			moontpl.Command = CommandServe
 			moontpl.SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
 			moontpl.AddLuaDir(moontpl.SiteDir)
+			moontpl.AddRunTags("serve", "autoreload")
+
+			if !isDirectory(moontpl.SiteDir) {
+				println("error: SITEDIR must be a directory")
+				os.Exit(1)
+			}
+
 			go moontpl.StartFsWatch()
 			moontpl.Serve("localhost:" + strconv.Itoa(args.Serve.Port))
 		}
