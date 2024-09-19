@@ -138,23 +138,6 @@ func openLibs(L *lua.LState) {
 		L.Push(lua.LString(lib.libName))
 		L.Call(1, 0)
 	}
-
-	L.SetGlobal("print", L.NewFunction(func(L *lua.LState) int {
-		if GetInternalVar(L, "recursed") != lua.LNil {
-			return 0
-		}
-
-		top := L.GetTop()
-		for i := 1; i <= top; i++ {
-			fmt.Print(L.ToStringMeta(L.Get(i)).String())
-			if i != top {
-				fmt.Print("\t")
-			}
-		}
-		fmt.Println("")
-		return 0
-	}))
-
 }
 
 func (m *Moontpl) initAddedGlobals(L *lua.LState) {
@@ -213,17 +196,6 @@ func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
 	})
 }
 
-func (m *Moontpl) SetPageData(L *lua.LState, pageData PageData) {
-	// make sure page module is loaded
-	L.DoString(`require "page"`)
-
-	mod := getLoadedModule(L, "page")
-	if mod != lua.LNil {
-		t := pageDataToLValue(L, pageData)
-		L.SetField(mod, "input", t)
-	}
-}
-
 func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
 	L.PreloadModule("page", func(L *lua.LState) int {
 		mod := L.NewTable()
@@ -246,7 +218,6 @@ func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
 		}))
 
 		L.SetField(mod, "list", L.NewFunction(func(L *lua.LState) int {
-			// ignore any errors
 			pages, err := m.GetPages()
 			if err != nil {
 				panic(err)
@@ -290,14 +261,6 @@ func luarFromArray[T any](L *lua.LState, items []T) lua.LValue {
 		t.Append(luar.New(L, x))
 	}
 	return t
-}
-
-func SetInternalVar(L *lua.LState, key string, val lua.LValue) {
-	L.G.Registry.RawSetString(registryPrefix+key, val)
-}
-
-func GetInternalVar(L *lua.LState, key string) lua.LValue {
-	return L.G.Registry.RawGetString(registryPrefix + key)
 }
 
 func pageDataToLValue(L *lua.LState, data PageData) lua.LValue {

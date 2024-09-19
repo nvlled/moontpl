@@ -49,8 +49,11 @@ func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
 }
 
 func (m *Moontpl) GetPages() ([]Page, error) {
+	// to avoid infinite recursion, do not load the modules,
+	// such that the default empty functions will be used instead
 	L := m.createState("-", false)
 	defer L.Close()
+
 	// disable printing
 	L.DoString("print = function() end")
 
