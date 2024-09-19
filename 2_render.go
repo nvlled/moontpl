@@ -67,7 +67,7 @@ func (m *Moontpl) renderFile(L *lua.LState, filename string) (lua.LValue, error)
 			err := L.CallByParam(lua.P{
 				Fn:      onPageRender,
 				NRet:    1,
-				Protect: false,
+				Protect: true,
 			}, lv)
 
 			if err != nil {

@@ -124,6 +124,7 @@ local function nodeToString(node, level)
 		level = 1
 	end
 
+	-- TODO: handle overflow, limited to 3000~ items
 	local body = table.concat(
 		ext.map(node.children, function(sub)
 			if type(sub) == "string" then
@@ -254,7 +255,7 @@ local function importGlobals()
 	TITLE = Node "title"
 	BODY = Node "body"
 	SCRIPT = Node("script", { noHTMLEscape = true })
-	LINK = Node("link", { selfClosing = false })
+	LINK = Node("link", { selfClosing = true })
 	STYLE = Node("style", { noHTMLEscape = true })
 	META = Node("meta", { selfClosing = true })
 

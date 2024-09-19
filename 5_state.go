@@ -29,7 +29,9 @@ type Moontpl struct {
 	luaGlobals  map[string]any
 	fileSystems []fs.FS
 	cachedPages []Page
-	builder     *siteBuilder
+
+	builder   *siteBuilder
+	fsWatcher *FsWatcher
 }
 
 type PageData map[string]any
@@ -44,7 +46,8 @@ func New() *Moontpl {
 		fileSystems: []fs.FS{},
 		cachedPages: []Page{},
 
-		builder: newSiteBuilder(),
+		builder:   newSiteBuilder(),
+		fsWatcher: newFsWatcher(),
 	}
 
 	self.AddFs(embedded)

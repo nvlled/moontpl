@@ -160,6 +160,7 @@ func ExecuteCLI() {
 			moontpl.Command = CommandServe
 			moontpl.SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
 			moontpl.AddLuaDir(moontpl.SiteDir)
+			go moontpl.StartFsWatch()
 			moontpl.Serve("localhost:" + strconv.Itoa(args.Serve.Port))
 		}
 	}

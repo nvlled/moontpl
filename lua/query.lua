@@ -65,4 +65,21 @@ function query.findLocalLinks(node)
 	return result
 end
 
+function query.select(node, ...)
+	for _, tag in ipairs(arg)do
+		local nextNode = nil
+		for _, child in ipairs(node.children) do
+			if child.tag == tag then
+				nextNode = child
+				break
+			end
+		end
+		node = nextNode
+		if not node then
+			break
+		end
+	end
+	return node
+end
+
 return query

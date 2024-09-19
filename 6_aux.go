@@ -69,8 +69,23 @@ func isSubDirectory(base, sub string) bool {
 }
 
 func respondInternalError(w http.ResponseWriter, err error) {
+	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprintf(w, "error: %v", err)
+	fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+<pre>
+%v
+</pre>
+<style>
+body {
+	font-size: 21px;
+	color: #f00;
+	background: #222;
+} 
+</style>
+</html>
+	`, err)
 	log.Print(err)
 	debug.PrintStack()
 }

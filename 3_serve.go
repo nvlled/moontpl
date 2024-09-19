@@ -28,6 +28,11 @@ func (m *Moontpl) createHTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		pagePath := path.Clean(r.URL.Path)
 
+		if pagePath == reloadFilename {
+			m.handleCheckModified(w, r)
+			return
+		}
+
 		var filename string
 		if pagePath == "/" {
 			filename = path.Join(m.SiteDir, "index.html.lua")
