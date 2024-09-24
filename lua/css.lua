@@ -1,7 +1,7 @@
-local ext = require("ext")
+local ext = require "ext"
 
 local function trim(s)
-    return s:match("^%s*(.-)%s*$")
+    return s:match "^%s*(.-)%s*$"
 end
 
 local function underscore2Dash(s)
@@ -64,33 +64,30 @@ local function mediaToString(media)
         buffer[#buffer] = ext.trim(buffer[#buffer])
     end
 
-    return "@media " .. media.types .. " {\n" ..
-        table.concat(buffer, "\n") ..
-        "}"
+    return "@media " .. media.types .. " {\n" .. table.concat(buffer, "\n") .. "}"
 end
 
 local cssMeta = {
     __tostring = cssToString,
-    __textContent = cssToString
+    __textContent = cssToString,
 }
 
 local cssMediaMeta = {
     __tostring = mediaToString,
-    __textContent = mediaToString
+    __textContent = mediaToString,
 }
-
 
 local function appendSelector(parent, child, nospace)
     local sep = nospace and "" or " "
-    if not parent:find(",") and not child:find(",") then
+    if not parent:find "," and not child:find "," then
         return parent .. sep .. child
     end
 
     local xs = {}
     for h in ext.split(parent, ",") do
-        h = h:match("^%s*(.-)%s*$")
+        h = h:match "^%s*(.-)%s*$"
         for k in ext.split(child, ",") do
-            k = k:match("^%s*(.-)%s*$")
+            k = k:match "^%s*(.-)%s*$"
             table.insert(xs, h .. sep .. k)
         end
     end
@@ -131,7 +128,7 @@ local function _CSS(args, selector)
         elseif type(key) == "number" and type(value) == "table" then
             table.insert(subRules, value)
         else
-            error("invalid declaration")
+            error "invalid declaration"
         end
     end
 
@@ -207,4 +204,3 @@ return {
     CSS_MEDIA = CSS_MEDIA,
     importGlobals = importGlobals,
 }
-

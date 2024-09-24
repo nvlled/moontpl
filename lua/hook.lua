@@ -5,7 +5,7 @@ local hook = {}
 -- Node is an HTML node (see html module). The node
 -- can be modified directly, or the function can return
 -- a new modified copy.
-function hook.onPageRender(node) 
+function hook.onPageRender(node)
     -- stub
 end
 

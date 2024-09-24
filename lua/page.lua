@@ -22,16 +22,16 @@ page.PAGE_FILENAME = ""
 
 -- Returns the list of pages
 -- found in the SITEDIR.
-function page.list() 
-     -- stub
-    return {} 
+function page.list()
+    -- stub
+    return {}
 end
 
--- Returns the list of filenames 
+-- Returns the list of filenames
 -- found in the SITEDIR.
-function page.files() 
-     -- stub
-    return {} 
+function page.files()
+    -- stub
+    return {}
 end
 
 return page
