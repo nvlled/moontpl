@@ -322,7 +322,26 @@ local function importGlobals()
 	FRAGMENT = Node ""
 end
 
-function toMarkdown(node, parent, level)
+local inlineNodes = {
+	a = true,
+	b = true,
+	i = true,
+	s = true,
+	span = true,
+	small = true,
+	em = true,
+	strong = true,
+	img = true,
+	code = true,
+	label = true,
+}
+
+-- TODO: shit kludgey code, please refactor later
+function toMarkdown(node, parent, level, index, preserveLineBreaks)
+	if node.tag == "pre" then
+		preserveLineBreaks = true
+	end
+
 	if not level then
 		level = 0
 	end
@@ -330,25 +349,51 @@ function toMarkdown(node, parent, level)
 		return ""
 	end
 
+	local function prevNewline()
+		local prevSibling = parent and parent.children[index - 1]
+		if not prevSibling then
+			return ""
+		end
+		if type(prevSibling) == "string" or inlineNodes[prevSibling.tag] then
+			return "\n\n"
+		end
+		return ""
+	end
+
 	local function getBody()
-		return table.concat(
-			ext.map(node.children, function(sub)
-				if type(sub) == "string" then
-					return sub
-				elseif not sub then
-					return ""
+		local result = {}
+		for i, sub in ipairs(node.children) do
+			if type(sub) == "string" then
+				local lines = {}
+				for line in ext.lines(sub) do
+					line = ext.trimLeft(line)
+					table.insert(lines, line)
 				end
-				return toMarkdown(sub, node)
-			end),
-			""
-		)
+				for j, line in ipairs(lines) do
+					if j > 1 and i > 1 and j < #lines then
+						line = " " .. line
+					end
+					if preserveLineBreaks then
+						line = line .. "\n"
+					end
+					table.insert(result, line)
+				end
+			elseif not sub then
+				table.insert(result, "")
+			else
+				table.insert(result, toMarkdown(sub, node, level, i, preserveLineBreaks))
+			end
+		end
+		return table.concat(result, "")
 	end
 
 	if node.tag == "" then
-		return "\n\n" .. getBody() .. "\n\n"
+		return getBody()
 	elseif node.tag == "br" then
-		return "\n"
-	elseif node.tag == "p" or node.tag == "div" then
+		return ""
+	elseif node.tag == "div" then
+		return getBody() .. "\n\n"
+	elseif node.tag == "p" then
 		return getBody() .. "\n\n"
 	elseif node.tag == "h1" then
 		return "# " .. getBody() .. "\n\n"
@@ -363,20 +408,20 @@ function toMarkdown(node, parent, level)
 	elseif node.tag == "h6" then
 		return "######" .. getBody() .. "\n\n"
 	elseif node.tag == "strong" or node.tag == "b" then
-		return "**" .. getBody() .. "**"
+		return "**" .. getBody() .. "**" .. " "
 	elseif node.tag == "em" or node.tag == "i" then
-		return "*" .. getBody() .. "*"
+		return "*" .. getBody() .. "*" .. " "
 	elseif node.tag == "blockquote" then
-		return "> " .. getBody()
+		return "> " .. getBody() .. "\n\n"
 	elseif node.tag == "li" then
 		local result = ext.map(node.children, function(sub, i)
-			if sub.tag == "ul" then
-				return "\n" .. ext.indent(toMarkdown(sub, node, level + 1), level * 3)
+			if sub.tag == "ul" or sub.tag == "ol" then
+				return "\n" .. ext.indent(toMarkdown(sub, node, level, i, preserveLineBreaks), (level + 1) * 3)
 			else
 				if i > 1 and node.children[i - 1].tag == "ul" then
-					return ext.indent(toMarkdown(sub, node, level + 1), level * 3)
+					return ext.indent(toMarkdown(sub, node, level, preserveLineBreaks), (level + 1) * 3, i)
 				else
-					return toMarkdown(sub, node, level + 1) .. " "
+					return toMarkdown(sub, node, level, i, preserveLineBreaks) .. " "
 				end
 			end
 		end)
@@ -390,26 +435,26 @@ function toMarkdown(node, parent, level)
 					prefix = "\n"
 				end
 				local dash = ordered and "1. " or "-  "
-				return prefix .. dash .. toMarkdown(sub, node, level + 1) .. "\n"
+				return prefix .. dash .. toMarkdown(sub, node, level, i, preserveLineBreaks) .. "\n"
 			else
-				return toMarkdown(sub, node, level + 1) .. (i < #node.children and " " or "")
+				return toMarkdown(sub, node, level + 1, i, preserveLineBreaks) .. (i < #node.children and " " or "")
 			end
 		end)
-		return "\n" .. table.concat(result, "")
+		return prevNewline() .. table.concat(result, "")
 	elseif node.tag == "img" then
-		return "![" .. node.attrs.alt .. "](" .. node.attrs.src .. ")"
+		return "![" .. node.attrs.alt .. "](" .. node.attrs.src .. ")" .. " "
 	elseif node.tag == "code" then
 		if parent and parent.tag == "pre" then
-			return "```\n" .. ext.trimRight(getBody()) .. "\n````\n"
+			return "```\n" .. ext.detab(getBody(), "| ") .. "\n````"
 		end
 		return "`" .. getBody() .. "`"
 	elseif node.tag == "pre" then
 		return getBody()
 	elseif node.tag == "hr" then
-		return "\n***\n\n"
+		return prevNewline() .. "***" .. "\n\n"
 	elseif node.tag == "a" then
 		local title = node.attrs.title and ' "' .. node.attrs.title .. '"' or ""
-		return "[" .. getBody() .. "](" .. node.attrs.href .. title .. ")"
+		return "[" .. getBody() .. "](" .. node.attrs.href .. title .. ")" .. " "
 	end
 
 	return tostring(node)

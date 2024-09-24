@@ -1,10 +1,22 @@
 local P = {}
 
 function P.trim(s)
-    return s:match("^%s*(.-)%s*$")
+    if not s then
+        return ""
+    end
+    return s:match "^%s*(.-)%s*$"
 end
 function P.trimRight(s)
-    return s:match("(.-)%s*$")
+    if not s then
+        return ""
+    end
+    return s:match "^(.-)%s*$"
+end
+function P.trimLeft(s)
+    if not s then
+        return ""
+    end
+    return s:match "^%s*(.-)$"
 end
 
 function P.dirPath(path)
@@ -24,8 +36,8 @@ function P.isEmptyString(str)
 end
 
 function P.rep(str, n)
-    if type(n) ~= "number" then 
-        error("repeat second parameter must be a number")
+    if type(n) ~= "number" then
+        error "repeat second parameter must be a number"
     end
 
     local result = {}
@@ -113,7 +125,9 @@ end
 
 function P.len(t)
     local count = 0
-    for _ in pairs(t) do count = count + 1 end
+    for _ in pairs(t) do
+        count = count + 1
+    end
     return count
 end
 
@@ -136,7 +150,7 @@ function P.split(inputstr, sep)
 end
 
 function P.endsWith(s, suffix)
-    return s:sub(- #suffix) == suffix
+    return s:sub(-#suffix) == suffix
 end
 
 function P.getFileExt(s)
@@ -171,19 +185,27 @@ function P.alt(x, y)
 end
 
 function P.parseDateTime(dateTimeStr)
-    if not dateTimeStr then return nil end
+    if not dateTimeStr then
+        return nil
+    end
 
-    local i = dateTimeStr:find(" ") or #dateTimeStr + 1
+    local i = dateTimeStr:find " " or #dateTimeStr + 1
     local dateStr = dateTimeStr:sub(1, i - 1)
     local timeStr = dateTimeStr:sub(i + 1)
     local year, month, day = string.match(dateStr, "(%d+)-(%d+)-(%d+)")
     local hour, min, sec = string.match(timeStr, "(%d+):(%d+):?(%d+)")
 
-    if not year then return nil end
+    if not year then
+        return nil
+    end
 
     return os.time {
-        year = year, month = month, day = day,
-        hour = hour, min = min, sec = sec
+        year = year,
+        month = month,
+        day = day,
+        hour = hour,
+        min = min,
+        sec = sec,
     }
 end
 
@@ -192,7 +214,7 @@ function P.indent(str, numSpaces)
         numSpaces = 1
     end
     local result = {}
-    for line in str:gmatch '[^\n]+' do
+    for line in str:gmatch "[^\n]+" do
         for i = 1, numSpaces do
             table.insert(result, " ")
         end
@@ -200,6 +222,36 @@ function P.indent(str, numSpaces)
         table.insert(result, "\n")
     end
     return table.concat(result, "")
+end
+
+function P.lines(str)
+    return P.split(str, "\n")
+end
+
+function P.joinLines(str)
+    local lines = {}
+    for line in P.lines(str) do
+        line = P.trim(line)
+        table.insert(lines, line)
+    end
+    return table.concat(lines, " ")
+end
+
+function P.detab(str, fence)
+    local lines = {}
+    for line in P.lines(str) do
+        table.insert(lines, line)
+    end
+
+    for i, line in ipairs(lines) do
+        line = P.trimLeft(line)
+        if fence and line:sub(1, #fence) == fence then
+            line = line:sub(#fence + 1)
+        end
+        lines[i] = line
+    end
+
+    return P.trimRight(table.concat(lines, "\n"))
 end
 
 return P
