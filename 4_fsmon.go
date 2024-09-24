@@ -37,7 +37,6 @@ func (fw *FsWatcher) Emit(filename string) {
 	fw.mu.Lock()
 	defer fw.mu.Unlock()
 
-	log.Printf("emit %v to %v listeners", filename, len(fw.listeners))
 	for _, fn := range fw.listeners {
 		fn(filename)
 	}
@@ -60,7 +59,7 @@ func (fw *FsWatcher) Off(id int) {
 	fw.mu.Unlock()
 }
 
-func (m *Moontpl) StartFsWatch() error {
+func (m *Moontpl) startFsWatch() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -103,9 +102,16 @@ func (m *Moontpl) StartFsWatch() error {
 
 		return nil
 	})
-
 	if err != nil {
 		return err
+	}
+
+	if fsExists("./lua") {
+		dir := mustAbs("./lua")
+		log.Print("watching dir: ", dir)
+		if err := watcher.Add(dir); err != nil {
+			panic(err)
+		}
 	}
 
 	<-make(chan struct{})

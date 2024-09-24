@@ -3,10 +3,12 @@ package moontpl
 import (
 	"embed"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alexflint/go-arg"
 	"github.com/samber/lo"
@@ -27,6 +29,7 @@ type buildCmd struct {
 type runCmd struct {
 	Filename string `arg:"positional,required" help:"run a lua file and show ouput on the STDOUT"`
 	SiteDir  string `arg:"-d" help:"for nested site directories, set to explicitly indicate where the site root is"`
+	Watch    bool   `arg:"-w" help:"watch file for changes"`
 }
 
 func (*runCmd) Epilogue() string {
@@ -107,13 +110,27 @@ func ExecuteCLI() {
 
 			moontpl.AddLuaPath(fmt.Sprintf("%s/?.lua", moontpl.SiteDir))
 			moontpl.AddRunTags("run")
-			output, err := moontpl.RenderFile(args.Run.Filename)
 
-			if err != nil {
-				panic(err)
-			} else {
-				println(output)
+			run := func() {
+				output, err := moontpl.RenderFile(args.Run.Filename)
+
+				if err != nil {
+					log.Println(err)
+				} else {
+					println(output)
+					fmt.Printf(" --------------------[ output %s ]--------------------", time.Now().Local().Format("15:04:05"))
+				}
 			}
+
+			if args.Run.Watch {
+				moontpl.fsWatcher.On(func(string) {
+					run()
+				})
+			}
+
+			go moontpl.startFsWatch()
+			run()
+			<-make(chan struct{})
 		}
 
 	case args.Build != nil:
@@ -171,7 +188,7 @@ func ExecuteCLI() {
 				os.Exit(1)
 			}
 
-			go moontpl.StartFsWatch()
+			go moontpl.startFsWatch()
 			moontpl.Serve("localhost:" + strconv.Itoa(args.Serve.Port))
 		}
 	}
