@@ -26,13 +26,13 @@ There are several ways of using moontpl:
 
 -  Static site generator 
 -  Templating engine 
--  Internal web framework (TODO)
+-  Web framework (TODO)
 
 ### Static Site Generator
 
 #### 1. Installation
 
-First, install the [go toolchain](https://go.dev/doc/install)if you haven't already. Then run the following command to install to compile and install the binary.
+First, install the [go toolchain](https://go.dev/doc/install) if you haven't already. Then run the following command to install to compile and install the binary.
 
 ```bash
 $ go install github.com/nvlled/moontpl/cmd/moontpl
@@ -42,7 +42,7 @@ If everything went well, then the command moontpl should be available.
 
 Running `moontpl` without any arguments should show the help file:
 
-```
+```bash
 $ moontpl
 Usage: moontpl [--luadir LUADIR] [--runtag RUNTAG] <command> [<args>]
 
@@ -59,16 +59,38 @@ Commands:
   serve
 ```
 
-#### More examples
+#### 2. Create a simple site from scratch
 
-You can find more example from the examples repository:
+```bash
+# Create site directory
+mkdir -p mysite
 
+# Create a lua page file
+cat << EOF > mysite/index.html.lua
+require("html").importGlobals()
+return DIV { "hello, world" }
+EOF
+
+# Run file and show output
+moontpl run mysite/index.html.lua
+# outputs <div>hello, world</div>
+
+# Builds the site into the output/ directory.
+# All .html.lua are rendered into .html
+# all other files are copied into the output.
+moontpl build mysite/ output/
 ```
+
+#### 3. More examples
+
+You can find more example from the examples repository: (TODO)
+
+```bash
 $ git clone github.com/nvlled/moontpl-examples
 $ moontpl
 ```
 
-#### Next steps
+#### 4. Next steps
 
 Read the documentation to learn how to write and make pages with lua!! (WIP)
 
