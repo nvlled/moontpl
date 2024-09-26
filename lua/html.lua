@@ -3,6 +3,8 @@ local ext = require "ext"
 local ctorMeta
 local nodeMeta
 
+local truncateRest = {}
+
 local function trim(s) return s:match "^%s*(.-)%s*$" end
 
 local function tableLen(t)
@@ -182,6 +184,8 @@ local function _node(tagName, args, options)
     setmetatable(result, nodeMeta)
 
     for k, v in pairs(args) do
+        if v == truncateRest then break end
+
         if type(k) == "string" then
             if k:sub(1, 2) == "--" then
                 options[k:sub(3)] = v
@@ -339,12 +343,14 @@ local function importGlobals()
     FRAGMENT = Node ""
 
     MARKDOWN = markdown
+    TRUNCATE = truncateRest
 end
 
 function markdown(...)
     local body = {}
     for _, elem in ipairs({...}) do table.insert(body, elem) end
-    return ext.trim(toMarkdown(FRAGMENT(body)))
+    local result =  ext.trim(toMarkdown(FRAGMENT(body))):gsub("\n\n\n+", "\n\n")
+    return result
 end
 
 local inlineNodes = {
@@ -369,13 +375,13 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
     if not node then return "" end
 
     local function prevNewline()
-        local prevSibling = parent and parent.children[index - 1]
-        local isPrevString = type(prevSibling) == "string"
-        local isPrevBlock = inlineNodes[prevSibling and prevSibling.tag]
-        if isPrevString or not isPrevBlock then return "\n\n" end
-        if not inlineNodes[node.tag] and (isPrevString or isPrevBlock) then
-            return "\n\n"
-        end
+        local prevSibling = parent and parent.children[index - 1] or {}
+        local isPrevBlock = not (type(prevSibling) == "string" or
+                                inlineNodes[prevSibling.tag])
+        local isCurBlock = not (type(node) == "string" or inlineNodes[node.tag])
+
+        if isPrevBlock or isCurBlock then return "\n\n" end
+
         return ""
     end
 

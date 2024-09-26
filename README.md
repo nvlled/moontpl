@@ -2,17 +2,13 @@
 
 ![](sample.png)
 
-
-
 **moontpl** is a [templating engine](https://en.wikipedia.org/wiki/Template_processor) that uses lua DSL to generate HTML/CSS/Markdown files.
 
 -----------------
 
 ## Rationale / motivations (AKA But why?)
 
-Long-story-short, I like lua's 
-
-*everything is tables* syntax and philosophy. I personally find it tedious to write HTML by hand, and find it even more laborious to read. HTML is also just a markup language, so it's almost always used as a compilation target for anything beyond the simple use cases.
+Long-story-short, I like lua's *everything is tables* syntax and philosophy. I personally find it tedious to write HTML by hand, and find it even more laborious to read. HTML is also just a markup language, so it's almost always used as a compilation target for anything beyond the simple use cases.
 
 This is where lua and my weird DSL comes in. Lua uses a uniform syntax for arrays and dictionaries. This allows me to express tree-based structures more expressively, and in particular, write HTML code more succintly.
 
@@ -79,6 +75,10 @@ moontpl run mysite/index.html.lua
 # All .html.lua are rendered into .html
 # all other files are copied into the output.
 moontpl build mysite/ output/
+
+# Open local web server at http://localhost:9876,
+# only use for local development, not for production use.
+moontpl serve mysite
 ```
 
 #### 3. More examples
@@ -86,8 +86,8 @@ moontpl build mysite/ output/
 You can find more example from the examples repository: (TODO)
 
 ```bash
-$ git clone github.com/nvlled/moontpl-examples
-$ moontpl
+$ git clone github.com/nvlled/moontpl
+$ cd moontpl/examples
 ```
 
 #### 4. Next steps

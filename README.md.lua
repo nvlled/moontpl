@@ -9,7 +9,9 @@ return MARKDOWN {
     IMG {src = "sample.png"};
 
     P {
-        STRONG "moontpl" .. SPAN " is a " .. A {
+        STRONG "moontpl";
+        SPAN " is a ";
+        A {
             href = "https://en.wikipedia.org/wiki/Template_processor";
             "templating engine";
         };
@@ -21,7 +23,9 @@ return MARKDOWN {
     H2 "Rationale / motivations (AKA But why?)";
 
     P {
-        "Long-story-short, I like lua's " .. EM "everything is tables" .. [[
+        "Long-story-short, I like lua's ";
+        EM "everything is tables";
+        [[
        syntax and philosophy. I personally find it tedious to write
        HTML by hand, and find it even more laborious to read. HTML is
        also just a markup language, so it's almost always used as a compilation
@@ -52,8 +56,8 @@ return MARKDOWN {
     H4 "1. Installation";
 
     P {
-        "First, install the " ..
-            A {href = "https://go.dev/doc/install"; "go toolchain"};
+        "First, install the ";
+        A {href = "https://go.dev/doc/install"; "go toolchain"};
         " if you haven't already. Then run the following command\
          to install to compile and install the binary.";
     };
@@ -102,6 +106,10 @@ return MARKDOWN {
     # All .html.lua are rendered into .html
     # all other files are copied into the output.
     moontpl build mysite/ output/
+
+    # Open local web server at http://localhost:9876,
+    # only use for local development, not for production use.
+    moontpl serve mysite
     ]];
 
     H4 "3. More examples";
@@ -109,8 +117,8 @@ return MARKDOWN {
     P "You can find more example from the examples repository: (TODO)";
 
     PRE ^ CODE {_lang = "bash"} ^ [[
-    $ git clone github.com/nvlled/moontpl-examples
-    $ moontpl  
+    $ git clone github.com/nvlled/moontpl
+    $ cd moontpl/examples
     ]];
 
     H4 "4. Next steps";
