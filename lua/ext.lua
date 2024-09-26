@@ -1,21 +1,15 @@
 local P = {}
 
 function P.trim(s)
-    if not s then
-        return ""
-    end
+    if not s then return "" end
     return s:match "^%s*(.-)%s*$"
 end
 function P.trimRight(s)
-    if not s then
-        return ""
-    end
+    if not s then return "" end
     return s:match "^(.-)%s*$"
 end
 function P.trimLeft(s)
-    if not s then
-        return ""
-    end
+    if not s then return "" end
     return s:match "^%s*(.-)$"
 end
 
@@ -23,17 +17,13 @@ function P.dirPath(path)
     local i = 1
     while true do
         local j = path:find("/", i)
-        if not j then
-            break
-        end
+        if not j then break end
         i = j + 1
     end
     return path:sub(1, i - 2), path:sub(i)
 end
 
-function P.isEmptyString(str)
-    return not str or str == ""
-end
+function P.isEmptyString(str) return not str or str == "" end
 
 function P.rep(str, n)
     if type(n) ~= "number" then
@@ -41,9 +31,7 @@ function P.rep(str, n)
     end
 
     local result = {}
-    for i = 1, n do
-        table.insert(result, str)
-    end
+    for i = 1, n do table.insert(result, str) end
     return table.concat(result, "")
 end
 
@@ -56,9 +44,7 @@ function P.relativePath(targetPath, srcPath)
     local i = 1
     while true do
         local j = srcPath:find("/", i)
-        if not j then
-            break
-        end
+        if not j then break end
         slashCount = slashCount + 1
         i = j + 1
     end
@@ -68,48 +54,30 @@ end
 
 function P.filter(t, pred)
     local result = {}
-    for i, v in pairs(t) do
-        if pred(v, i) then
-            table.insert(result, v)
-        end
-    end
+    for i, v in pairs(t) do if pred(v, i) then table.insert(result, v) end end
     return result
 end
 
-function P.each(xs, fn)
-    for i, v in pairs(t) do
-        fn(v, i)
-    end
-end
+function P.each(xs, fn) for i, v in pairs(t) do fn(v, i) end end
 
 function P.sortedIter(m, fn)
     local keys = {}
-    for k in pairs(m) do
-        table.insert(keys, k)
-    end
+    for k in pairs(m) do table.insert(keys, k) end
     table.sort(keys)
-    for _, k in ipairs(keys) do
-        fn(m[k], k)
-    end
+    for _, k in ipairs(keys) do fn(m[k], k) end
 end
 
 function P.map(t, fn)
     local result = {}
-    for i, v in pairs(t) do
-        table.insert(result, fn(v, i))
-    end
+    for i, v in pairs(t) do table.insert(result, fn(v, i)) end
     return result
 end
 
 function P.mapSlice(si, sj, t, fn)
     local result = {}
     for i, v in pairs(t) do
-        if i >= si then
-            table.insert(result, fn(v, i))
-        end
-        if i >= sj then
-            goto finish
-        end
+        if i >= si then table.insert(result, fn(v, i)) end
+        if i >= sj then goto finish end
     end
     ::finish::
     return result
@@ -117,17 +85,13 @@ end
 
 function P.slice(t, from, to)
     local result = {}
-    for i = from, to, 1 do
-        table.insert(result, t[i])
-    end
+    for i = from, to, 1 do table.insert(result, t[i]) end
     return result
 end
 
 function P.len(t)
     local count = 0
-    for _ in pairs(t) do
-        count = count + 1
-    end
+    for _ in pairs(t) do count = count + 1 end
     return count
 end
 
@@ -149,45 +113,33 @@ function P.split(inputstr, sep)
     end
 end
 
-function P.endsWith(s, suffix)
-    return s:sub(-#suffix) == suffix
-end
+function P.endsWith(s, suffix) return s:sub(-#suffix) == suffix end
 
 function P.getFileExt(s)
     local lastDotIndex = -1
     local i = #s
     while i > 1 do
-        if s:sub(i, i) == "." then
-            lastDotIndex = i
-        end
+        if s:sub(i, i) == "." then lastDotIndex = i end
         i = i - 1
     end
-    if lastDotIndex > 0 then
-        return s:sub(lastDotIndex, -1)
-    end
+    if lastDotIndex > 0 then return s:sub(lastDotIndex, -1) end
 
     return ""
 end
 
 function P.reverse(xs)
     local result = {}
-    for i = #xs, 1, -1 do
-        result[#xs - i + 1] = xs[i]
-    end
+    for i = #xs, 1, -1 do result[#xs - i + 1] = xs[i] end
     return result
 end
 
 function P.alt(x, y)
-    if not x or x == "" then
-        return y
-    end
+    if not x or x == "" then return y end
     return x
 end
 
 function P.parseDateTime(dateTimeStr)
-    if not dateTimeStr then
-        return nil
-    end
+    if not dateTimeStr then return nil end
 
     local i = dateTimeStr:find " " or #dateTimeStr + 1
     local dateStr = dateTimeStr:sub(1, i - 1)
@@ -195,38 +147,30 @@ function P.parseDateTime(dateTimeStr)
     local year, month, day = string.match(dateStr, "(%d+)-(%d+)-(%d+)")
     local hour, min, sec = string.match(timeStr, "(%d+):(%d+):?(%d+)")
 
-    if not year then
-        return nil
-    end
+    if not year then return nil end
 
     return os.time {
-        year = year,
-        month = month,
-        day = day,
-        hour = hour,
-        min = min,
-        sec = sec,
+        year = year;
+        month = month;
+        day = day;
+        hour = hour;
+        min = min;
+        sec = sec;
     }
 end
 
 function P.indent(str, numSpaces)
-    if not numSpaces then
-        numSpaces = 1
-    end
+    if not numSpaces then numSpaces = 1 end
     local result = {}
     for line in str:gmatch "[^\n]+" do
-        for i = 1, numSpaces do
-            table.insert(result, " ")
-        end
+        for i = 1, numSpaces do table.insert(result, " ") end
         table.insert(result, line)
         table.insert(result, "\n")
     end
     return table.concat(result, "")
 end
 
-function P.lines(str)
-    return P.split(str, "\n")
-end
+function P.lines(str) return P.split(str, "\n") end
 
 function P.joinLines(str)
     local lines = {}
@@ -239,9 +183,7 @@ end
 
 function P.detab(str, fence)
     local lines = {}
-    for line in P.lines(str) do
-        table.insert(lines, line)
-    end
+    for line in P.lines(str) do table.insert(lines, line) end
 
     for i, line in ipairs(lines) do
         line = P.trimLeft(line)

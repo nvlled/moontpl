@@ -10,7 +10,7 @@ local path = {}
 -- example:
 --   local params = path.getParams("/showimage[filename=cat.jpg,size=300].html")
 --   -- params == {filename="cat.jpg", size="300"}
-function path.getParams(link) return {} 
+function path.getParams(link)
     -- stub
     return {}
 end
@@ -27,7 +27,7 @@ function path.setParams(link, params, clear)
 end
 
 -- Returns true if link has params.
-function path.hasParams(link) 
+function path.hasParams(link)
     -- stub
     return false
 end

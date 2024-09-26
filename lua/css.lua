@@ -1,21 +1,13 @@
 local ext = require "ext"
 
-local function trim(s)
-    return s:match "^%s*(.-)%s*$"
-end
+local function trim(s) return s:match "^%s*(.-)%s*$" end
 
-local function underscore2Dash(s)
-    return string.gsub(s, "_", "-")
-end
+local function underscore2Dash(s) return string.gsub(s, "_", "-") end
 
 local function sortTable(t)
     local result = {}
-    for k, v in pairs(t) do
-        table.insert(result, { k = k, v = v })
-    end
-    table.sort(result, function(a, b)
-        return a.k < b.k
-    end)
+    for k, v in pairs(t) do table.insert(result, {k = k; v = v}) end
+    table.sort(result, function(a, b) return a.k < b.k end)
     return result
 end
 
@@ -43,9 +35,7 @@ local function cssToString(ruleset)
 
         table.insert(buffer, indent .. "}\n")
 
-        if rule.mediaQuery then
-            table.insert(buffer, "}\n")
-        end
+        if rule.mediaQuery then table.insert(buffer, "}\n") end
 
         ::continue::
     end
@@ -60,22 +50,15 @@ local function mediaToString(media)
             table.insert(buffer, "  " .. line)
         end
     end
-    if #buffer > 0 then
-        buffer[#buffer] = ext.trim(buffer[#buffer])
-    end
+    if #buffer > 0 then buffer[#buffer] = ext.trim(buffer[#buffer]) end
 
-    return "@media " .. media.types .. " {\n" .. table.concat(buffer, "\n") .. "}"
+    return "@media " .. media.types .. " {\n" .. table.concat(buffer, "\n") ..
+               "}"
 end
 
-local cssMeta = {
-    __tostring = cssToString,
-    __textContent = cssToString,
-}
+local cssMeta = {__tostring = cssToString; __textContent = cssToString}
 
-local cssMediaMeta = {
-    __tostring = mediaToString,
-    __textContent = mediaToString,
-}
+local cssMediaMeta = {__tostring = mediaToString; __textContent = mediaToString}
 
 local function appendSelector(parent, child, nospace)
     local sep = nospace and "" or " "
@@ -96,30 +79,23 @@ local function appendSelector(parent, child, nospace)
 end
 
 local function _CSS(args, selector)
-    if not selector then
-        selector = ""
-    end
+    if not selector then selector = "" end
 
-    local rule = {
-        mediaQuery = nil,
-        selector = selector,
-        declarations = {},
-    }
-    local result = {
-        type = "css",
-        rule,
-    }
+    local rule = {mediaQuery = nil; selector = selector; declarations = {}}
+    local result = {type = "css"; rule}
     local subRules = {}
 
     for key, value in pairs(args) do
         if type(key) == "string" then
             if type(value) == "table" then
-                local subRules = _CSS(value, appendSelector(selector, key, true))
+                local subRules =
+                    _CSS(value, appendSelector(selector, key, true))
                 for _, s in ipairs(subRules) do
                     table.insert(result, s)
                 end
             elseif type(value) == "number" then
-                rule.declarations[underscore2Dash(key)] = tostring(value) .. "px"
+                rule.declarations[underscore2Dash(key)] = tostring(value) ..
+                                                              "px"
             elseif key == "@media" then
                 rule.mediaQuery = tostring(value)
             else
@@ -144,7 +120,8 @@ local function _CSS(args, selector)
                     rule.selector = appendSelector(selector, rule.selector)
 
                     if rule.mediaQuery then
-                        rule.mediaQuery = value.types .. " and " .. rule.mediaQuery
+                        rule.mediaQuery =
+                            value.types .. " and " .. rule.mediaQuery
                     else
                         rule.mediaQuery = value.types
                     end
@@ -167,7 +144,7 @@ local function _CSS(args, selector)
 end
 
 local function _CSS_MEDIA(args, types)
-    local result = { types = types, rulesets = args }
+    local result = {types = types; rulesets = args}
     return result
 end
 
@@ -199,8 +176,4 @@ local function importGlobals()
     _G.CSS_MEDIA = CSS_MEDIA
 end
 
-return {
-    CSS = CSS,
-    CSS_MEDIA = CSS_MEDIA,
-    importGlobals = importGlobals,
-}
+return {CSS = CSS; CSS_MEDIA = CSS_MEDIA; importGlobals = importGlobals}

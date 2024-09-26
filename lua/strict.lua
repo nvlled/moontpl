@@ -14,14 +14,14 @@ function strict.enable()
             if not globalVars[key] then
                 error("undefined variable: " .. key, 2)
             end
-        end,
+        end;
         __index = function(table, key)
             print("get global:", key)
             if not globalVars[key] then
                 error("undefined variable: " .. key, 2)
             end
             return nil
-        end,
+        end;
     })
     return strict
 end
@@ -36,9 +36,7 @@ end
 --   var3 = 3    -- will error
 --   print(var4) -- will error
 function strict.declare(...)
-    for _, varname in ipairs(arg) do
-        globalVars[varname] = true
-    end
+    for _, varname in ipairs(arg) do globalVars[varname] = true end
     return strict
 end
 
