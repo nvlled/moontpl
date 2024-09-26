@@ -16,9 +16,10 @@ const reloadFilename = "/.modified"
 type WatcherFn func(string)
 
 type FsWatcher struct {
-	watcher   *fsnotify.Watcher
-	listeners map[int]WatcherFn
-	nextID    int
+	watcher      *fsnotify.Watcher
+	listeners    map[int]WatcherFn
+	filesToWatch []string
+	nextID       int
 
 	// just use a simple mutex since
 	// this will only be used on a local development server,
@@ -59,12 +60,23 @@ func (fw *FsWatcher) Off(id int) {
 	fw.mu.Unlock()
 }
 
+func (fw *FsWatcher) Add(filename string) {
+	fw.filesToWatch = append(fw.filesToWatch, mustAbs(filename))
+}
+
+func (m *Moontpl) stopFsWatch() error {
+	w := m.fsWatcher.watcher
+	if w != nil {
+		return w.Close()
+	}
+	return nil
+}
+
 func (m *Moontpl) startFsWatch() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
-	defer watcher.Close()
 	m.fsWatcher.watcher = watcher
 
 	go func() {
@@ -76,7 +88,6 @@ func (m *Moontpl) startFsWatch() error {
 					return
 				}
 				if event.Has(fsnotify.Write | fsnotify.Create) {
-					log.Println("modified file:", event.Name)
 					m.fsWatcher.Emit(event.Name)
 				}
 			case err, ok := <-watcher.Errors:
@@ -91,6 +102,9 @@ func (m *Moontpl) startFsWatch() error {
 	err = fs.WalkDir(os.DirFS(m.SiteDir), ".", func(p string, dir fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if p != "." && p[0] == '.' {
+			return nil
 		}
 		if dir.IsDir() {
 			filename := filepath.Join(m.SiteDir, p)
@@ -113,8 +127,12 @@ func (m *Moontpl) startFsWatch() error {
 			panic(err)
 		}
 	}
-
-	<-make(chan struct{})
+	for _, filename := range m.fsWatcher.filesToWatch {
+		log.Print("watching: ", filename)
+		if err := watcher.Add(filename); err != nil {
+			panic(err)
+		}
+	}
 
 	return nil
 }

@@ -29,14 +29,16 @@ type buildCmd struct {
 type runCmd struct {
 	Filename string `arg:"positional,required" help:"run a lua file and show ouput on the STDOUT"`
 	SiteDir  string `arg:"-d" help:"for nested site directories, set to explicitly indicate where the site root is"`
-	Watch    bool   `arg:"-w" help:"watch file for changes"`
+	Watch    bool   `arg:"-w" help:"watch file for changes" default:false`
+	Force    bool   `arg:"-f" help:"try to run file even it doesn't have .lua file extension" default:false`
 }
 
 func (*runCmd) Epilogue() string {
 	return `SITEDIR is automatically inferred based on the current working directory (CWD).
 For example, in $ moontpl run ./site/foo/bar/page.html.lua
 SITEDIR will be set to ./site since it's the closest directory from CWD to page.html.lua
-This matters when require()'ing files found on the SITEDIR. The alternative is to set the LUADIR.
+that contains a .lua file. This matters when require()'ing files found on the SITEDIR.
+The alternative is to set the LUADIR.
 `
 }
 
@@ -56,6 +58,16 @@ type cliArgs struct {
 
 var args cliArgs
 
+func showHelp(parser *arg.Parser) {
+	parser.WriteHelp(os.Stdout)
+
+	if args.Run != nil {
+		println()
+		println(args.Run.Epilogue())
+	}
+	os.Exit(0)
+}
+
 func ExecuteCLI() {
 	p, err := arg.NewParser(arg.Config{}, &args)
 	if err != nil {
@@ -65,15 +77,7 @@ func ExecuteCLI() {
 	err = p.Parse(os.Args[1:])
 	switch {
 	case err == arg.ErrHelp:
-		{
-			p.WriteHelp(os.Stdout)
-
-			if args.Run != nil {
-				println()
-				println(args.Run.Epilogue())
-			}
-			os.Exit(0)
-		}
+		showHelp(p)
 
 	case err != nil:
 		{
@@ -92,6 +96,10 @@ func ExecuteCLI() {
 	}
 
 	switch {
+
+	default:
+		showHelp(p)
+
 	case args.Run != nil:
 		{
 			moontpl.Command = CommandRun
@@ -108,8 +116,10 @@ func ExecuteCLI() {
 				}
 			}
 
-			moontpl.AddLuaPath(fmt.Sprintf("%s/?.lua", moontpl.SiteDir))
-			moontpl.AddRunTags("run")
+			if filepath.Ext(args.Run.Filename) != ".lua" && !args.Run.Force {
+				println("file must have a .lua file extension")
+				os.Exit(-1)
+			}
 
 			run := func() {
 				output, err := moontpl.RenderFile(args.Run.Filename)
@@ -117,20 +127,31 @@ func ExecuteCLI() {
 				if err != nil {
 					log.Println(err)
 				} else {
-					println(output)
-					fmt.Printf(" --------------------[ output %s ]--------------------", time.Now().Local().Format("15:04:05"))
+					fmt.Println(output)
 				}
 			}
-
-			if args.Run.Watch {
-				moontpl.fsWatcher.On(func(string) {
-					run()
-				})
+			printLine := func() {
+				fmt.Printf(" --------------------[ output %s ]--------------------\n", time.Now().Local().Format("15:04:05"))
 			}
 
-			go moontpl.startFsWatch()
-			run()
-			<-make(chan struct{})
+			moontpl.AddLuaPath(fmt.Sprintf("%s/?.lua", moontpl.SiteDir))
+			moontpl.AddRunTags("run")
+			if args.Run.Watch {
+				moontpl.fsWatcher.On(func(string) {
+					print("\033c")
+					run()
+					printLine()
+				})
+
+				_ = moontpl.startFsWatch()
+				run()
+				printLine()
+
+				<-make(chan struct{})
+			} else {
+				run()
+			}
+
 		}
 
 	case args.Build != nil:
@@ -188,7 +209,7 @@ func ExecuteCLI() {
 				os.Exit(1)
 			}
 
-			go moontpl.startFsWatch()
+			_ = moontpl.startFsWatch()
 			moontpl.Serve("localhost:" + strconv.Itoa(args.Serve.Port))
 		}
 	}
