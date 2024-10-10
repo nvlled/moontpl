@@ -131,6 +131,7 @@ func (m *Moontpl) createState(filename string, initModules ...bool /* = true */)
 		m.initHookModule(L)
 		m.initBuildModule(L)
 		m.initTagsModule(L)
+		m.initSiteModule(L)
 	}
 
 	// allow loading lua modules from fs.Fs (mainly for embedded files)
@@ -292,10 +293,147 @@ func (m *Moontpl) initTagsModule(L *lua.LState) {
 	})
 }
 
-func luarFromArray[T any](L *lua.LState, items []T) lua.LValue {
+func (m *Moontpl) initSiteModule(L *lua.LState) {
+	L.PreloadModule("site", func(L *lua.LState) int {
+		mod := L.NewTable()
+		L.SetField(mod, "files", L.NewFunction(func(L *lua.LState) int {
+			options := L.OptTable(1, L.NewTable())
+
+			dir := lua.LString("/")
+			var filter lua.LValue = lua.LNil
+			var includeLua lua.LValue = lua.LFalse
+
+			if options != lua.LNil {
+				if s, ok := options.RawGetString("dir").(lua.LString); ok {
+					dir = s
+				}
+				if f, ok := options.RawGetString("filter").(*lua.LFunction); ok {
+					filter = f
+				}
+				if val := options.RawGetString("lua"); val != lua.LNil {
+					includeLua = val
+				}
+			}
+
+			result := L.NewTable()
+			err := fs.WalkDir(os.DirFS(m.SiteDir), ".", func(p string, entry fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if entry.IsDir() {
+					return nil
+				}
+
+				p = "/" + p
+				if !isSubDirectory(string(dir), p) {
+					return nil
+				}
+
+				if filter != lua.LNil {
+					err = L.CallByParam(lua.P{
+						Fn:      filter,
+						NRet:    1,
+						Protect: true,
+					}, lua.LString(p))
+
+					if err != nil {
+						panic(err)
+					}
+
+					if ret := L.Get(-1); ret == lua.LNil || ret == lua.LFalse {
+						return nil
+					}
+				}
+
+				if strings.HasSuffix(p, ".lua") {
+					if wholeExt(p) == ".lua" {
+						if includeLua == lua.LFalse {
+							return nil // skip plain .lua files
+						}
+					} else {
+						p = p[0 : len(p)-4] // remove .lua
+					}
+				}
+
+				result.Append(lua.LString(p))
+
+				return nil
+			})
+
+			if err != nil {
+				panic(err)
+			}
+
+			L.Push(result)
+			return 1
+		}))
+
+		L.Push(mod)
+		return 1
+	})
+}
+
+func mapToLtable[T any](L *lua.LState, items map[string]T) lua.LValue {
 	t := L.NewTable()
-	for _, x := range items {
-		t.Append(luar.New(L, x))
+	for k, v := range items {
+		var lv lua.LValue
+		var x any = v
+		switch v := x.(type) {
+		case float32:
+			lv = lua.LNumber(v)
+		case float64:
+			lv = lua.LNumber(v)
+		case int:
+			lv = lua.LNumber(v)
+		case int8:
+			lv = lua.LNumber(v)
+		case int16:
+			lv = lua.LNumber(v)
+		case int32:
+			lv = lua.LNumber(v)
+		case int64:
+			lv = lua.LNumber(v)
+
+		case string:
+			lv = lua.LString(v)
+		case bool:
+			lv = lua.LBool(v)
+		default:
+			lv = luar.New(L, v)
+		}
+		t.RawSetString(k, lv)
+	}
+	return t
+}
+
+func arrayToLTable[T any](L *lua.LState, items []T) *lua.LTable {
+	t := L.NewTable()
+	for _, v := range items {
+		var lv lua.LValue
+		var x any = v
+		switch v := x.(type) {
+		case float32:
+			lv = lua.LNumber(v)
+		case float64:
+			lv = lua.LNumber(v)
+		case int:
+			lv = lua.LNumber(v)
+		case int8:
+			lv = lua.LNumber(v)
+		case int16:
+			lv = lua.LNumber(v)
+		case int32:
+			lv = lua.LNumber(v)
+		case int64:
+			lv = lua.LNumber(v)
+		case string:
+			lv = lua.LString(v)
+		case bool:
+			lv = lua.LBool(v)
+		default:
+			lv = luar.New(L, v)
+		}
+		t.Append(lv)
 	}
 	return t
 }
@@ -305,8 +443,21 @@ func pageDataToLValue(L *lua.LState, data PageData) lua.LValue {
 	for k, v := range data {
 		var lv lua.LValue
 		switch v := v.(type) {
+		case float32:
+			lv = lua.LNumber(v)
+		case float64:
+			lv = lua.LNumber(v)
 		case int:
 			lv = lua.LNumber(v)
+		case int8:
+			lv = lua.LNumber(v)
+		case int16:
+			lv = lua.LNumber(v)
+		case int32:
+			lv = lua.LNumber(v)
+		case int64:
+			lv = lua.LNumber(v)
+
 		case string:
 			lv = lua.LString(v)
 		case bool:
