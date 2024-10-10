@@ -36,8 +36,8 @@ func (m *Moontpl) queueLink(link string) {
 }
 
 func (m *Moontpl) build(src, dest string) error {
-	L := m.createState(src)
-	defer L.Close()
+	L := m.getState(src)
+	defer m.putState(L)
 
 	output, err := m.RenderFile(src)
 	if err != nil {

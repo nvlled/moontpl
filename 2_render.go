@@ -6,8 +6,8 @@ import (
 )
 
 func (m *Moontpl) RenderFile(filename string) (string, error) {
-	L := m.createState(filename)
-	defer L.Close()
+	L := m.getState(filename)
+	defer m.luaPool.Put(L)
 
 	lv, err := m.renderFile(L, filename)
 	if err != nil {
@@ -27,8 +27,9 @@ func (m *Moontpl) RenderFile(filename string) (string, error) {
 }
 
 func (m *Moontpl) RenderString(luaCode string) (string, error) {
-	L := m.createState("inline.lua")
-	defer L.Close()
+	L := m.getState("-")
+	defer m.luaPool.Put(L)
+
 	if err := L.DoString(luaCode); err != nil {
 		return "", err
 	}

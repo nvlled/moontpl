@@ -130,25 +130,29 @@ func ExecuteCLI() {
 					fmt.Println(output)
 				}
 			}
-			printLine := func() {
-				fmt.Printf(" --------------------[ output %s ]--------------------\n", time.Now().Local().Format("15:04:05"))
-			}
 
 			moontpl.AddLuaPath(fmt.Sprintf("%s/?.lua", moontpl.SiteDir))
 			moontpl.AddRunTags("run")
+
 			if args.Run.Watch {
-				moontpl.fsWatcher.On(func(string) {
-					print("\033c")
+				moontpl.fsWatcher.On(func(filename string) {
+					modname := filepath.Base(filename)
+					modname = strings.TrimSuffix(modname, filepath.Ext(modname))
+					moontpl.luaPool.resetLoadedPoolModules(modname)
+
+					now := time.Now().Local().Format("15:04:05")
+					fmt.Printf(" --------------------[ start output %s ]--------------------\n", now)
 					run()
-					printLine()
+					fmt.Printf(" --------------------[ end output   %s ]--------------------\n", now)
 				})
 
 				_ = moontpl.startFsWatch()
 				run()
-				printLine()
+				fmt.Printf(" --------------------[ output %s ]--------------------\n", time.Now().Local().Format("15:04:05"))
 
 				<-make(chan struct{})
 			} else {
+				moontpl.disableLuaPool = true
 				run()
 			}
 
@@ -169,7 +173,7 @@ func ExecuteCLI() {
 					os.Exit(1)
 				}
 
-				os.MkdirAll(outputDir, 0755)
+				_ = os.MkdirAll(outputDir, 0755)
 
 				if !isDirectory(outputDir) {
 					println("error: OUTPUTDIR must be a directory")
@@ -203,6 +207,12 @@ func ExecuteCLI() {
 			moontpl.SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
 			moontpl.AddLuaDir(moontpl.SiteDir)
 			moontpl.AddRunTags("serve", "autoreload")
+
+			moontpl.fsWatcher.On(func(filename string) {
+				modname := filepath.Base(filename)
+				modname = strings.TrimSuffix(modname, filepath.Ext(modname))
+				moontpl.luaPool.resetLoadedPoolModules(modname)
+			})
 
 			if !isDirectory(moontpl.SiteDir) {
 				println("error: SITEDIR must be a directory")

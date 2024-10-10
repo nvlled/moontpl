@@ -11,9 +11,7 @@ import (
 	luar "layeh.com/gopher-luar"
 )
 
-const (
-	registryPrefix = "moontpl."
-)
+const filenameRegistryIndex = lua.LNumber(-9988001)
 
 const (
 	CommandNone = iota
@@ -28,11 +26,13 @@ type Moontpl struct {
 	luaModules  map[string]ModMap
 	luaGlobals  map[string]any
 	fileSystems []fs.FS
-	cachedPages []Page
 	runtags     map[string]struct{}
 
 	builder   *siteBuilder
 	fsWatcher *FsWatcher
+
+	luaPool        *lStatePool
+	disableLuaPool bool
 }
 
 type PageData map[string]any
@@ -45,11 +45,14 @@ func New() *Moontpl {
 		luaModules:  map[string]ModMap{},
 		luaGlobals:  map[string]any{},
 		fileSystems: []fs.FS{},
-		cachedPages: []Page{},
 		runtags:     make(map[string]struct{}),
 
 		builder:   newSiteBuilder(),
 		fsWatcher: newFsWatcher(),
+
+		luaPool: &lStatePool{
+			saved: make([]*lua.LState, 0, 4),
+		},
 	}
 
 	self.AddFs(embedded)
@@ -95,9 +98,6 @@ func (m *Moontpl) AddLuaDir(dir string) {
 }
 
 func (m *Moontpl) SetPageData(L *lua.LState, pageData PageData) {
-	// make sure page module is loaded
-	L.DoString(`require "page"`)
-
 	mod := getLoadedModule(L, "page")
 	if mod != lua.LNil {
 		t := pageDataToLValue(L, pageData)
@@ -117,18 +117,56 @@ func (m *Moontpl) RemoveRunTags(tags ...string) {
 	}
 }
 
-func (m *Moontpl) createState(filename string, initModules ...bool /* = true */) *lua.LState {
+func (m *Moontpl) getState(filename string) *lua.LState {
+	var L *lua.LState
+	if !m.disableLuaPool {
+		L = m.luaPool.Get()
+	}
+	if L == nil {
+		L = m.createState()
+	}
+
+	L.G.Registry.RawSet(filenameRegistryIndex, lua.LString(filename))
+
+	page := getLoadedModule(L, "page")
+	if page != lua.LNil {
+		pagePath := m.getPagePath(filename)
+		L.SetField(page, "PAGE_LINK", lua.LString(pagePath.Link))
+		L.SetField(page, "PAGE_FILENAME", lua.LString(pagePath.AbsFile))
+		L.SetField(page, "data", L.NewTable())
+		L.SetField(page, "input", L.NewTable())
+	}
+
+	hook := getLoadedModule(L, "hook")
+	if hook != lua.LNil {
+		L.SetField(hook, "onPageRender", nil)
+	}
+
+	return L
+}
+
+func (m *Moontpl) putState(L *lua.LState) {
+	if !m.disableLuaPool {
+		m.luaPool.Put(L)
+	} else {
+		L.Close()
+	}
+}
+
+func (m *Moontpl) createState(initModules ...bool /* = true */) *lua.LState {
 	L := lua.NewState(lua.Options{
-		SkipOpenLibs: true,
+		SkipOpenLibs:        true,
+		IncludeGoStackTrace: true,
 	})
 
-	openLibs(L)
+	m.openLibs(L)
+	m.patchStdLib(L)
 
 	if len(initModules) == 0 || initModules[0] {
 		m.initAddedGlobals(L)
 		m.initAddedModules(L)
-		m.initPageModule(L, filename)
-		m.initPathModule(L, filename)
+		m.initPageModule(L)
+		m.initPathModule(L)
 		m.initHookModule(L)
 		m.initBuildModule(L)
 		m.initTagsModule(L)
@@ -142,7 +180,7 @@ func (m *Moontpl) createState(filename string, initModules ...bool /* = true */)
 	return L
 }
 
-func openLibs(L *lua.LState) {
+func (m *Moontpl) openLibs(L *lua.LState) {
 	var luaLibs = []struct {
 		libName string
 		libFunc lua.LGFunction
@@ -154,17 +192,75 @@ func openLibs(L *lua.LState) {
 		{lua.MathLibName, lua.OpenMath},
 
 		// Disable these libraries:
-		//{lua.DebugLibName, lua.OpenDebug},
+		//{lua.DebugLibName, lua.OpenDebug}
 		//{lua.IoLibName, lua.OpenIo},
-		//{lua.OsLibName, lua.OpenOs},
 		//{lua.ChannelLibName, lua.OpenChannel},
 		//{lua.CoroutineLibName, lua.OpenCoroutine},
+
+		// include, but keep only time and date functions
+		{lua.OsLibName, lua.OpenOs},
 	}
+
 	for _, lib := range luaLibs {
 		L.Push(L.NewFunction(lib.libFunc))
 		L.Push(lua.LString(lib.libName))
 		L.Call(1, 0)
 	}
+
+}
+
+func (m *Moontpl) patchStdLib(L *lua.LState) {
+	// disable other os functions
+	L.DoString(`
+		os.exit = nil
+		os.getenv = nil
+		os.remove = nil
+		os.rename = nil
+		os.setenv = nil
+		os.setlocale = nil
+		os.tmpname = nil
+	`)
+
+	// Change dofile and loadfile such that it prepends SITEDIR to the filename
+	// example: dofile("/somedir/file.lua") == dofile(SITEDIR .. "/somedir/file.lua")
+
+	dofile := L.GetGlobal("dofile").(*lua.LFunction)
+	L.SetGlobal("dofile", L.NewFunction(func(L *lua.LState) int {
+		src := path.Join(m.SiteDir, L.ToString(1))
+		if !strings.HasSuffix(src, ".lua") {
+			src += ".lua"
+		}
+
+		top := L.GetTop()
+		L.Push(dofile)
+		L.Push(lua.LString(src))
+		L.Call(1, lua.MultRet)
+
+		return L.GetTop() - top
+	}))
+
+	loadfile := L.GetGlobal("loadfile").(*lua.LFunction)
+	L.SetGlobal("loadfile", L.NewFunction(func(L *lua.LState) int {
+		src := path.Join(m.SiteDir, L.ToString(1))
+		if !strings.HasSuffix(src, ".lua") {
+			src += ".lua"
+		}
+
+		top := L.GetTop()
+		L.Push(loadfile)
+		L.Push(lua.LString(src))
+		L.Call(1, lua.MultRet)
+
+		return L.GetTop() - top
+	}))
+
+	// Patch require so that dependencies are tracked,
+	// so that when module files are modified, the dependent modules
+	// will also be reloaded. Lua state pooling must also
+	// be enabled, otherwise, there's no point to tracking
+	// dependencies because modules will be always loaded
+	// for every render.
+	L.SetGlobal("require", L.NewFunction(requireWithDependencyTree(m, L)))
 }
 
 func (m *Moontpl) initAddedGlobals(L *lua.LState) {
@@ -188,33 +284,46 @@ func (m *Moontpl) initAddedModules(L *lua.LState) {
 	}
 }
 
-func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
+func (m *Moontpl) initPathModule(L *lua.LState) {
 	L.PreloadModule("path", func(L *lua.LState) int {
 		mod := L.NewTable()
-		L.SetField(mod, "getParams", luar.New(L, getPathParams))
+		L.SetField(mod, "getParams", L.NewFunction(func(L *lua.LState) int {
+			link := L.CheckString(1)
+			L.Push(mapToLtable(L, getPathParams(link)))
+			return 1
+		}))
+
 		L.SetField(mod, "setParams", luar.New(L, setPathParams))
 		L.SetField(mod, "hasParams", luar.New(L, hasPathParams))
 
-		L.SetField(mod, "absolute", L.NewFunction(func(L *lua.LState) int {
+		L.SetField(mod, "relative", L.NewFunction(func(L *lua.LState) int {
 			targetLink := L.CheckString(1)
-			pagePath := m.getPagePath(filename)
-			L.Push(lua.LString(relativeFrom(targetLink, pagePath.Link)))
+
+			filename := string(L.G.Registry.RawGet(filenameRegistryIndex).(lua.LString))
+			L.Push(lua.LString(relativeFrom(targetLink, m.getPagePath(filename).Link)))
 			return 1
 		}))
 
 		L.SetField(mod, "absolute", L.NewFunction(func(L *lua.LState) int {
 			link := L.CheckString(1)
+			if link == "" {
+				L.Push(lua.LString(""))
+				return 1
+			}
+
 			if link[0] == '/' {
 				L.Push(lua.LString(link))
 				return 1
 			}
+
+			filename := string(L.G.Registry.RawGet(filenameRegistryIndex).(lua.LString))
 			pagePath := m.getPagePath(filename)
+
 			result := path.Dir(pagePath.Link)
 			result = path.Join(result, link)
 			result = path.Clean(result)
 
 			L.Push(lua.LString(result))
-
 			return 1
 		}))
 
@@ -223,24 +332,30 @@ func (m *Moontpl) initPathModule(L *lua.LState, filename string) {
 	})
 }
 
-func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
+func (m *Moontpl) initPageModule(L *lua.LState) {
 	L.PreloadModule("page", func(L *lua.LState) int {
 		mod := L.NewTable()
+
+		filename := string(L.G.Registry.RawGet(filenameRegistryIndex).(lua.LString))
 		pagePath := m.getPagePath(filename)
 
 		L.SetField(mod, "input", L.NewTable())
 		L.SetField(mod, "data", L.NewTable())
-		L.SetField(mod, "PAGE_FILENAME", lua.LString(pagePath.AbsFile))
+		L.SetField(mod, "PAGE_FILENAME", lua.LString(pagePath.RelFile))
 		L.SetField(mod, "PAGE_LINK", lua.LString(pagePath.Link))
 
 		L.SetField(mod, "files", L.NewFunction(func(L *lua.LState) int {
-			paths := m.GetPageFilenames(m.SiteDir)
+			paths, err := m.GetPageFilenames(m.SiteDir)
+			if err != nil {
+				panic(err)
+			}
+
 			var filenames []string
 			for _, p := range paths {
 				filenames = append(filenames, p.Link)
 			}
 
-			L.Push(luarFromArray(L, filenames))
+			L.Push(arrayToLTable(L, filenames))
 			return 1
 		}))
 
@@ -250,7 +365,7 @@ func (m *Moontpl) initPageModule(L *lua.LState, filename string) {
 				panic(err)
 			}
 
-			lv := luarFromArray(L, pages)
+			lv := arrayToLTable(L, pages)
 			L.Push(lv)
 
 			return 1

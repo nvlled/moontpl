@@ -87,6 +87,7 @@ func (m *Moontpl) startFsWatch() error {
 					log.Println("file watcher stopped(?)")
 					return
 				}
+				log.Printf("%v, %v\n", event.Name, event.Op)
 				if event.Has(fsnotify.Write | fsnotify.Create) {
 					m.fsWatcher.Emit(event.Name)
 				}

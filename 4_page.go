@@ -51,7 +51,7 @@ func (m *Moontpl) GetPageFilenames(baseDir string) ([]PagePath, error) {
 func (m *Moontpl) GetPages() ([]Page, error) {
 	// to avoid infinite recursion, do not load the modules,
 	// such that the default empty functions will be used instead
-	L := m.createState("-", false)
+	L := m.createState(false)
 	defer L.Close()
 
 	// disable printing
@@ -103,8 +103,6 @@ func getReturnedPageData(L *lua.LState, filename string) (*lua.LTable, error) {
 		data.ForEach(func(k, v lua.LValue) {
 			result.RawSet(k, v)
 		})
-
-		page.RawSetString("data", L.NewTable())
 
 		return result, nil
 	}
