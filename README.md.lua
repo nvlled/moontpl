@@ -8,24 +8,16 @@ return MARKDOWN {
 
     IMG {src = "sample.png"};
 
-    P {
-        STRONG "moontpl";
-        SPAN " is a ";
-        A {
-            href = "https://en.wikipedia.org/wiki/Template_processor";
-            "templating engine";
-        };
-        [[ that uses lua DSL to generate HTML/CSS/Markdown files.]];
-    };
+    P / STRONG "moontpl" / " is a " / A {
+        href = "https://en.wikipedia.org/wiki/Template_processor";
+        "templating engine";
+    } / [[ that uses lua DSL to generate HTML/CSS/Markdown files.]];
 
     L__________________________________________;
 
     H2 "Rationale / motivations (AKA But why?)";
 
-    P {
-        "Long-story-short, I like lua's ";
-        EM "everything is tables";
-        [[
+    P [[Long-story-short, I like lua's "]] / EM "everything is tables" / [[
        syntax and philosophy. I personally find it tedious to write
        HTML by hand, and find it even more laborious to read. HTML is
        also just a markup language, so it's almost always used as a compilation
@@ -36,8 +28,8 @@ return MARKDOWN {
        This allows me to express tree-based structures more expressively,
        and in particular, write HTML code more succintly.
 
-       In short, I like using lua as a DSL and I hate reading/writing HTML code directly.]];
-    };
+       In short, I like using lua as a DSL and I hate reading/writing HTML code directly.
+    ]];
 
     L__________________________________________;
 
