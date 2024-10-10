@@ -5,12 +5,18 @@ local nodeMeta
 
 local truncateRest = {}
 
-local function trim(s) return s:match "^%s*(.-)%s*$" end
+local function trim(s)
+    return s:match "^%s*(.-)%s*$"
+end
 
 local function tableLen(t)
-    if not t then return 0 end
+    if not t then
+        return 0
+    end
     local count = 0
-    for _, _ in pairs(t) do count = count + 1 end
+    for _, _ in pairs(t) do
+        count = count + 1
+    end
     return count
 end
 
@@ -51,7 +57,9 @@ local function styleToString(t)
 end
 
 local function attrsToString(attrs)
-    if tableLen(attrs) == 0 then return "" end
+    if tableLen(attrs) == 0 then
+        return ""
+    end
     local entries = {}
     for k, v in pairs(attrs) do
         if type(k) == "string" then
@@ -70,13 +78,23 @@ local function attrsToString(attrs)
     return " " .. table.concat(entries, " ")
 end
 
-local function nodeTextContent(node)
-    if not node or not node.tag then return "" end
+local function textContent(node)
+    if not node then
+        return ""
+    end
 
-    if node.options.tostring then return node.options.tostring(node) end
+    if getmetatable(node) ~= nodeMeta then
+        node = FRAGMENT(node)
+    end
+
+    if node.options.tostring then
+        return node.options.tostring(node)
+    end
 
     if node.options.selfClosing then
-        if not node.children or #node.children == 0 then return "" end
+        if not node.children or #node.children == 0 then
+            return ""
+        end
     end
 
     return table.concat(ext.map(node.children, function(sub)
@@ -90,9 +108,13 @@ local function nodeTextContent(node)
 end
 
 local function nodeToString(node, level)
-    if not node or not node.tag then return "" end
+    if not node or not node.tag then
+        return ""
+    end
 
-    if node.options.tostring then return node.options.tostring(node) end
+    if node.options.tostring then
+        return node.options.tostring(node)
+    end
 
     local prefix = node.options.prefix or ""
     local suffix = node.options.suffix or ""
@@ -105,7 +127,9 @@ local function nodeToString(node, level)
         end
     end
 
-    if not level then level = 1 end
+    if not level then
+        level = 1
+    end
 
     -- TODO: handle overflow, limited to 3000~ items
     local body = table.concat(ext.map(node.children, function(sub)
@@ -117,7 +141,9 @@ local function nodeToString(node, level)
         return nodeToString(sub, level)
     end), "")
 
-    if node.tag == "" then return body end
+    if node.tag == "" then
+        return body
+    end
 
     return
         prefix .. "<" .. node.tag .. attrsToString(node.attrs) .. ">" .. body ..
@@ -125,25 +151,33 @@ local function nodeToString(node, level)
 end
 
 local appendChild = function(a, b)
-    if type(a) == "function" then a = a() end
-    if type(a) == "string" then a = DIV(a) end
+    if type(a) == "function" then
+        a = a()
+    end
+    if type(a) == "string" then
+        a = DIV(a)
+    end
     table.insert(a.children, type(b) == "function" and b() or b)
     return a
 end
 
 local appendSibling = function(a, b)
-    if not a then return b end
-    if getmetatable(a) ~= nodeMeta then a = FRAGMENT(a) end
+    if not a then
+        return b
+    end
+    if getmetatable(a) ~= nodeMeta then
+        a = FRAGMENT(a)
+    end
     a.nextSibling = b
     return a
 end
 
 nodeMeta = {
-    __textContent = nodeTextContent;
+    __textContent = textContent;
     __tostring = nodeToString;
     __div = appendChild;
     __pow = appendChild;
-    __concat = appendSibling;
+    __call = function(_,a,b) return appendChild(a, b) end;
 }
 
 local function _node(tagName, args, options)
@@ -162,7 +196,9 @@ local function _node(tagName, args, options)
         return result
     end
 
-    if getmetatable(args) ~= nil then args = {args} end
+    if getmetatable(args) ~= nil then
+        args = {args}
+    end
 
     local attrs = {}
     local data = {}
@@ -184,7 +220,9 @@ local function _node(tagName, args, options)
     setmetatable(result, nodeMeta)
 
     for k, v in pairs(args) do
-        if v == truncateRest then break end
+        if v == truncateRest then
+            break
+        end
 
         if type(k) == "string" then
             if k:sub(1, 2) == "--" then
@@ -217,7 +255,7 @@ local function _node(tagName, args, options)
                 elseif mt and mt.__tostring then
                     table.insert(children, tostring(v))
                 elseif type(v) == "table" then
-                    for _, c in ipairs(FRAGMENT(v).children) do
+                    for _, c in ipairs(v) do
                         table.insert(children, c)
                     end
                 end
@@ -237,21 +275,61 @@ local function _node(tagName, args, options)
 end
 
 ctorMeta = {
-    __call = function(self, args) return self.ctor(args) end;
-    __pow = function(self, args) return self.ctor(args) end;
-    __div = function(self, args) return self.ctor(args) end;
-    __idiv = function(self, args) return self.ctor(args) end;
+    __call = function(self, args)
+        return self.ctor(args)
+    end;
+    __pow = function(self, args)
+        return self.ctor(args)
+    end;
+    __div = function(self, args)
+        return self.ctor(args)
+    end;
+    __idiv = function(self, args)
+        return self.ctor(args)
+    end;
 }
 
 local function Node(tagName, options)
     local ctor = function(args)
         args = args or {}
-        if getmetatable(args) == ctorMeta then args = args {} end
+        if getmetatable(args) == ctorMeta then
+            args = args {}
+        end
         local result = _node(tagName, args, options)
         return result
     end
     return setmetatable({ctor = ctor}, ctorMeta)
 end
+
+local function component(ctor, tagName, options)
+    local Comp = Node(tagName or "div")
+    return setmetatable({
+        ctor = function(args)
+            local node = Comp(args)
+            return ctor(node.attrs, node.children)
+        end;
+    }, ctorMeta)
+end
+
+local pp = component(function(attrs, children)
+    local result = {}
+    for _, c in ipairs(children) do
+        local t = type(c)
+        if t == "string" then
+            for line in ext.lines(c) do
+                if line == "" then
+                    table.insert(result, BR)
+                else
+                    table.insert(result, line)
+                    table.insert(result, BR)
+                end
+            end
+        else
+            table.insert(result, c)
+        end
+    end
+    return P(result)
+end)
 
 local function importGlobals()
     HTML = Node("html", {prefix = "<!DOCTYPE html>"})
@@ -270,6 +348,7 @@ local function importGlobals()
     P = Node "p"
     DIV = Node "div"
     SPAN = Node "span"
+    PP = pp
 
     DETAILS = Node "details"
     SUMMARY = Node "summary"
@@ -348,8 +427,10 @@ end
 
 function markdown(...)
     local body = {}
-    for _, elem in ipairs({...}) do table.insert(body, elem) end
-    local result =  ext.trim(toMarkdown(FRAGMENT(body))):gsub("\n\n\n+", "\n\n")
+    for _, elem in ipairs({...}) do
+        table.insert(body, elem)
+    end
+    local result = ext.trim(toMarkdown(FRAGMENT(body))):gsub("\n\n\n+", "\n\n")
     return result
 end
 
@@ -368,11 +449,19 @@ local inlineNodes = {
 
 -- TODO: shit kludgey code, please refactor later
 function toMarkdown(node, parent, level, index, preserveLineBreaks)
-    if not node then return nil end
-    if node.tag == "pre" then preserveLineBreaks = true end
+    if not node then
+        return nil
+    end
+    if node.tag == "pre" then
+        preserveLineBreaks = true
+    end
 
-    if not level then level = 0 end
-    if not node then return "" end
+    if not level then
+        level = 0
+    end
+    if not node then
+        return ""
+    end
 
     local function prevNewline()
         local prevSibling = parent and parent.children[index - 1] or {}
@@ -380,7 +469,9 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
                                 inlineNodes[prevSibling.tag])
         local isCurBlock = not (type(node) == "string" or inlineNodes[node.tag])
 
-        if isPrevBlock or isCurBlock then return "\n\n" end
+        if isPrevBlock or isCurBlock then
+            return "\n\n"
+        end
 
         return ""
     end
@@ -397,9 +488,6 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
                     if preserveLineBreaks then
                         line = line .. "\n"
                     else
-                        if i == 1 and not inlineNodes[node.tag] then
-                            line = ext.trimLeft(line)
-                        end
                         line = line:gsub("([ \t]+)", " ")
 
                         if node.tag == "p" and line == "" then
@@ -510,4 +598,10 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
     return tostring(node)
 end
 
-return {Node = Node; toMarkdown = toMarkdown; importGlobals = importGlobals}
+return {
+    Node = Node;
+    toMarkdown = toMarkdown;
+    importGlobals = importGlobals;
+    textContent = textContent;
+    Component = component;
+}

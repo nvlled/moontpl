@@ -29,8 +29,8 @@ type buildCmd struct {
 type runCmd struct {
 	Filename string `arg:"positional,required" help:"run a lua file and show ouput on the STDOUT"`
 	SiteDir  string `arg:"-d" help:"for nested site directories, set to explicitly indicate where the site root is"`
-	Watch    bool   `arg:"-w" help:"watch file for changes" default:false`
-	Force    bool   `arg:"-f" help:"try to run file even it doesn't have .lua file extension" default:false`
+	Watch    bool   `arg:"-w" help:"watch file for changes" default:"false"`
+	Force    bool   `arg:"-f" help:"try to run file even it doesn't have .lua file extension" default:"false"`
 }
 
 func (*runCmd) Epilogue() string {

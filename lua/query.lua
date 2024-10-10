@@ -52,7 +52,7 @@ end
 function query.select(node, ...)
     for _, tag in ipairs(arg) do
         local nextNode = nil
-        for _, child in ipairs(node.children) do
+        for _, child in ipairs(node.children or {}) do
             if child.tag == tag then
                 nextNode = child
                 break

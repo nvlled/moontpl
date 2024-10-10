@@ -36,7 +36,7 @@ func (l *Loader) LoadFile(L *lua.LState) int {
 
 	fn, err1 := L.LoadString(string(bytes))
 	if err1 != nil {
-		L.RaiseError(err1.Error())
+		L.RaiseError("failed to loadfile from fs.FS: %v", err1.Error())
 	}
 	L.Push(fn)
 	return 1

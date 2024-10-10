@@ -46,7 +46,7 @@ func GetPages() ([]Page, error) {
 	return moontpl.GetPages()
 }
 
-func GetPageFilenames(baseDir string) []PagePath {
+func GetPageFilenames(baseDir string) ([]PagePath, error) {
 	return moontpl.GetPageFilenames(baseDir)
 }
 

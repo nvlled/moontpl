@@ -69,12 +69,21 @@ func (m *Moontpl) build(src, dest string) error {
 func (m *Moontpl) BuildAll(outputDir string) error {
 	defer clear(m.builder.done)
 
-	for _, p := range m.GetPageFilenames(m.SiteDir) {
+	filenames, err := m.GetPageFilenames(m.SiteDir)
+	if err != nil {
+		return err
+	}
+	for _, p := range filenames {
 		m.queueLink(p.Link)
 	}
 
 	for len(m.builder.buildQueue) > 0 {
 		linkWithParams := m.builder.buildQueue[0]
+		hashIndex := strings.Index(string(linkWithParams), "#")
+		if hashIndex >= 0 {
+			linkWithParams = linkWithParams[0:hashIndex]
+		}
+
 		m.builder.buildQueue = m.builder.buildQueue[1:]
 
 		if _, ok := m.builder.done[linkWithParams]; ok {
@@ -84,6 +93,11 @@ func (m *Moontpl) BuildAll(outputDir string) error {
 		src := filepath.Join(m.SiteDir, string(linkWithParams)+".lua")
 		dest := filepath.Join(outputDir, string(linkWithParams))
 
+		_, actualFilename := extractPathParams(src)
+		if !fsExists(actualFilename) {
+			log.Printf("LINK NOT FOUND: %s", linkWithParams)
+		}
+
 		if err := m.build(src, dest); err != nil {
 			panic(err)
 		}
@@ -91,7 +105,11 @@ func (m *Moontpl) BuildAll(outputDir string) error {
 		m.builder.done[linkWithParams] = true
 	}
 
-	for _, p := range m.getNonHtmlLuaFilenames(m.SiteDir) {
+	plainFiles, err := m.getNonHtmlLuaFilenames(m.SiteDir)
+	if err != nil {
+		return err
+	}
+	for _, p := range plainFiles {
 		src := filepath.Join(m.SiteDir, string(p.Link)+".lua")
 		dest := filepath.Join(outputDir, string(p.Link))
 

@@ -20,9 +20,9 @@ type Page struct {
 	Data *lua.LTable `luar:"data"`
 }
 
-func (m *Moontpl) getNonHtmlLuaFilenames(baseDir string) []PagePath {
+func (m *Moontpl) getNonHtmlLuaFilenames(baseDir string) ([]PagePath, error) {
 	var result []PagePath
-	filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -31,12 +31,12 @@ func (m *Moontpl) getNonHtmlLuaFilenames(baseDir string) []PagePath {
 		}
 		return nil
 	})
-	return result
+	return result, err
 }
 
-func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
+func (m *Moontpl) GetPageFilenames(baseDir string) ([]PagePath, error) {
 	var result []PagePath
-	filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(baseDir, func(filename string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (m *Moontpl) GetPageFilenames(baseDir string) []PagePath {
 		}
 		return nil
 	})
-	return result
+	return result, err
 }
 
 func (m *Moontpl) GetPages() ([]Page, error) {
@@ -58,7 +58,13 @@ func (m *Moontpl) GetPages() ([]Page, error) {
 	L.DoString("print = function() end")
 
 	result := []Page{}
-	for _, entry := range m.GetPageFilenames(m.SiteDir) {
+
+	filenames, err := m.GetPageFilenames(m.SiteDir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range filenames {
 		data, err := getReturnedPageData(L, entry.AbsFile)
 		if err != nil {
 			return nil, err

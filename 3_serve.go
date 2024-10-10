@@ -69,6 +69,9 @@ func (m *Moontpl) createHTTPHandler() http.Handler {
 		ext := apply2(strings.TrimSuffix(filename, ".lua"), filepath.Ext, mime.TypeByExtension)
 
 		w.Header().Add("Content-Type", ext)
-		w.Write([]byte(output))
+		_, err = w.Write([]byte(output))
+		if err != nil {
+			respondInternalError(w, err)
+		}
 	})
 }
