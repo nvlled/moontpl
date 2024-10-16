@@ -305,8 +305,24 @@ func (m *Moontpl) initPathModule(L *lua.LState) {
 			return 1
 		}))
 
-		L.SetField(mod, "setParams", luar.New(L, setPathParams))
 		L.SetField(mod, "hasParams", luar.New(L, hasPathParams))
+
+		L.SetField(mod, "setParams", L.NewFunction(func(L *lua.LState) int {
+			filename := L.CheckString(1)
+			clear := L.OptBool(3, false)
+
+			params := pathParams{}
+			L.CheckTable(2).ForEach(func(k, v lua.LValue) {
+				key, ok := k.(lua.LString)
+				if !ok {
+					return
+				}
+				params[string(key)] = v.String()
+			})
+
+			L.Push(lua.LString(setPathParams(filename, params, clear)))
+			return 1
+		}))
 
 		L.SetField(mod, "relative", L.NewFunction(func(L *lua.LState) int {
 			targetLink := L.CheckString(1)

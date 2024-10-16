@@ -48,7 +48,7 @@ func extractPathParams(filename string) (pathParams, string) {
 	return result, re.ReplaceAllString(filename, "")
 }
 
-func setPathParams(filename string, params pathParams) string {
+func setPathParams(filename string, params pathParams, clear bool) string {
 	if len(params) == 0 {
 		return filename
 	}
@@ -57,7 +57,7 @@ func setPathParams(filename string, params pathParams) string {
 	filename = re.ReplaceAllString(filename, "")
 	tmp := map[string]string{}
 
-	if len(matched) > 0 {
+	if len(matched) > 0 && !clear {
 		for _, s := range strings.Split(matched[1:len(matched)-1], ",") {
 			i := strings.Index(s, "=")
 			if i < 0 {
