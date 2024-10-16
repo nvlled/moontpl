@@ -3,6 +3,7 @@ package moontpl
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 
 	lua "github.com/yuin/gopher-lua"
@@ -10,9 +11,9 @@ import (
 
 const dependencyIndex = lua.LNumber(-9988002)
 
-type dependentTable lua.LTable
+type dependencyTable lua.LTable
 
-func (dt *dependentTable) GetModules() []string {
+func (dt *dependencyTable) GetModules() []string {
 	t := (*lua.LTable)(dt)
 	var result []string
 	t.ForEach(func(k, _ lua.LValue) {
@@ -23,7 +24,7 @@ func (dt *dependentTable) GetModules() []string {
 	return result
 }
 
-func (dt *dependentTable) AddDependentOf(L *lua.LState, parentModule, dependentModule string) {
+func (dt *dependencyTable) AddDependentOf(L *lua.LState, parentModule, dependentModule string) {
 	t := (*lua.LTable)(dt)
 	deps, ok := t.RawGetString(parentModule).(*lua.LTable)
 	if !ok || deps == lua.LNil {
@@ -33,12 +34,12 @@ func (dt *dependentTable) AddDependentOf(L *lua.LState, parentModule, dependentM
 	deps.RawSetString(dependentModule, lua.LTrue)
 }
 
-func (dt *dependentTable) RemoveDependents(parentModule string) {
+func (dt *dependencyTable) RemoveDependents(parentModule string) {
 	t := (*lua.LTable)(dt)
 	t.RawSetString(parentModule, lua.LNil)
 }
 
-func (dt *dependentTable) GetDependentsOf(moduleName string) []string {
+func (dt *dependencyTable) GetDependentsOf(moduleName string) []string {
 	t := (*lua.LTable)(dt)
 	dependents, ok := t.RawGetString(moduleName).(*lua.LTable)
 	var result []string
@@ -53,7 +54,7 @@ func (dt *dependentTable) GetDependentsOf(moduleName string) []string {
 	return result
 }
 
-func (dt *dependentTable) ClearParent(moduleName string) {
+func (dt *dependencyTable) ClearParent(moduleName string) {
 	t := (*lua.LTable)(dt)
 	t.ForEach(func(k, v lua.LValue) {
 		if dependents, ok := v.(*lua.LTable); ok {
@@ -62,7 +63,7 @@ func (dt *dependentTable) ClearParent(moduleName string) {
 	})
 }
 
-func (dt *dependentTable) String() string {
+func (dt *dependencyTable) String() string {
 	t := (*lua.LTable)(dt)
 
 	var buffer bytes.Buffer
@@ -75,35 +76,52 @@ func (dt *dependentTable) String() string {
 	return buffer.String()
 }
 
-func requireWithDependencyTree(moontpl *Moontpl, L *lua.LState) lua.LGFunction {
-	level := 0
-	lineage := []string{}
-	dependents := (*dependentTable)(L.NewTable())
-	require := L.GetGlobal("require").(*lua.LFunction)
-	L.G.Registry.RawSet(dependencyIndex, (*lua.LTable)(dependents))
+type DependencyTracker struct {
+	level      int
+	lineage    []string
+	dependents *dependencyTable
+	require    *lua.LFunction
+}
 
+func newDepdencyTracker(L *lua.LState) *DependencyTracker {
+	self := &DependencyTracker{
+		level:      0,
+		lineage:    []string{},
+		dependents: (*dependencyTable)(L.NewTable()),
+	}
+	L.G.Registry.RawSet(dependencyIndex, (*lua.LTable)(self.dependents))
+	return self
+}
+
+func getModuleName(siteDir, modpath string) string {
+	modpath = strings.TrimPrefix(modpath, siteDir)
+	modpath = strings.TrimSuffix(modpath, ".lua")
+	if modpath[0] == '/' {
+		modpath = modpath[1:]
+	}
+	modpath = strings.ReplaceAll(modpath, "/", ".")
+	return modpath
+}
+
+func (dt *DependencyTracker) wrap(m *Moontpl, fn lua.LGFunction) lua.LGFunction {
 	return func(L *lua.LState) int {
-		name := L.ToString(1)
-		if !moontpl.disableLuaPool {
-			if len(lineage) >= 1 {
-				dependents.AddDependentOf(L, name, lineage[len(lineage)-1])
+		track := L.OptBool(2, true)
+		if !moontpl.disableLuaPool && track {
+			name := getModuleName(m.SiteDir, L.ToString(1))
+			if len(dt.lineage) >= 1 {
+				dt.dependents.AddDependentOf(L, name, dt.lineage[len(dt.lineage)-1])
 			}
 
-			level++
-			lineage = append(lineage, name)
+			dt.level++
+			dt.lineage = append(dt.lineage, name)
 
 			defer func() {
-				level--
-				lineage = lineage[:len(lineage)-1]
+				dt.level--
+				dt.lineage = dt.lineage[:len(dt.lineage)-1]
 			}()
 		}
 
-		top := L.GetTop()
-		L.Push(require)
-		L.Push(lua.LString(name))
-		L.Call(1, lua.MultRet)
-
-		return L.GetTop() - top
+		return fn(L)
 	}
 }
 
@@ -149,11 +167,11 @@ func (pl *lStatePool) resetLoadedPoolModules(moduleName string) {
 }
 
 func (pl *lStatePool) resetModuleDependents(L *lua.LState, moduleName string) {
-	var dependents *dependentTable
+	var dependents *dependencyTable
 	if t, ok := L.G.Registry.RawGet(dependencyIndex).(*lua.LTable); !ok {
 		return
 	} else {
-		dependents = (*dependentTable)(t)
+		dependents = (*dependencyTable)(t)
 	}
 
 	queue := []string{moduleName}
@@ -174,8 +192,6 @@ func (pl *lStatePool) resetModuleDependents(L *lua.LState, moduleName string) {
 		loadedModules := L.GetField(L.Get(lua.RegistryIndex), "_LOADED").(*lua.LTable)
 		loadedModules.RawSetString(name, lua.LNil)
 	}
-
-	dependents.ClearParent(moduleName)
 }
 
 func (pl *lStatePool) printLoadedModules() {
@@ -184,7 +200,7 @@ func (pl *lStatePool) printLoadedModules() {
 
 	for _, L := range pl.saved {
 		if t, ok := L.G.Registry.RawGet(dependencyIndex).(*lua.LTable); ok {
-			print((*dependentTable)(t).String())
+			print((*dependencyTable)(t).String())
 		}
 
 	}

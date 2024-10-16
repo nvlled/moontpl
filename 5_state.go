@@ -221,12 +221,20 @@ func (m *Moontpl) patchStdLib(L *lua.LState) {
 		os.tmpname = nil
 	`)
 
-	// Change dofile and loadfile such that it prepends SITEDIR to the filename
-	// example: dofile("/somedir/file.lua") == dofile(SITEDIR .. "/somedir/file.lua")
+	dt := newDepdencyTracker(L)
+
+	// Patch dofile, loadfile, and require so that dependencies are tracked,
+	// so that when module files are modified, the dependent modules
+	// will also be reloaded. Lua state pooling must also
+	// be enabled, otherwise, there's no point to tracking
+	// dependencies because modules will be always loaded
+	// for every render.
 
 	dofile := L.GetGlobal("dofile").(*lua.LFunction)
-	L.SetGlobal("dofile", L.NewFunction(func(L *lua.LState) int {
-		src := path.Join(m.SiteDir, L.ToString(1))
+	L.SetGlobal("dofile", L.NewFunction(dt.wrap(m, func(L *lua.LState) int {
+		src := L.ToString(1)
+		src = path.Join(m.SiteDir, src)
+
 		if !strings.HasSuffix(src, ".lua") {
 			src += ".lua"
 		}
@@ -237,10 +245,10 @@ func (m *Moontpl) patchStdLib(L *lua.LState) {
 		L.Call(1, lua.MultRet)
 
 		return L.GetTop() - top
-	}))
+	})))
 
 	loadfile := L.GetGlobal("loadfile").(*lua.LFunction)
-	L.SetGlobal("loadfile", L.NewFunction(func(L *lua.LState) int {
+	L.SetGlobal("loadfile", L.NewFunction(dt.wrap(m, func(L *lua.LState) int {
 		src := path.Join(m.SiteDir, L.ToString(1))
 		if !strings.HasSuffix(src, ".lua") {
 			src += ".lua"
@@ -252,15 +260,19 @@ func (m *Moontpl) patchStdLib(L *lua.LState) {
 		L.Call(1, lua.MultRet)
 
 		return L.GetTop() - top
-	}))
+	})))
 
-	// Patch require so that dependencies are tracked,
-	// so that when module files are modified, the dependent modules
-	// will also be reloaded. Lua state pooling must also
-	// be enabled, otherwise, there's no point to tracking
-	// dependencies because modules will be always loaded
-	// for every render.
-	L.SetGlobal("require", L.NewFunction(requireWithDependencyTree(m, L)))
+	require := L.GetGlobal("require").(*lua.LFunction)
+	L.SetGlobal("require", L.NewFunction(dt.wrap(m, func(L *lua.LState) int {
+		name := L.ToString(1)
+
+		top := L.GetTop()
+		L.Push(require)
+		L.Push(lua.LString(name))
+		L.Call(1, lua.MultRet)
+
+		return L.GetTop() - top
+	})))
 }
 
 func (m *Moontpl) initAddedGlobals(L *lua.LState) {
