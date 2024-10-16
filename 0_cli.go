@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -96,7 +97,6 @@ func ExecuteCLI() {
 	}
 
 	switch {
-
 	default:
 		showHelp(p)
 
@@ -136,19 +136,26 @@ func ExecuteCLI() {
 
 			if args.Run.Watch {
 				moontpl.fsWatcher.On(func(filename string) {
-					modname := filepath.Base(filename)
-					modname = strings.TrimSuffix(modname, filepath.Ext(modname))
+					var modname string
+					if !isSubDirectory(moontpl.SiteDir, filename) {
+						filename = path.Base(filename)
+						modname = getModuleName(moontpl.SiteDir, filename)
+					} else {
+						modname = getModuleName(moontpl.SiteDir, filename)
+					}
 					moontpl.luaPool.resetLoadedPoolModules(modname)
 
 					now := time.Now().Local().Format("15:04:05")
 					fmt.Printf(" --------------------[ start output %s ]--------------------\n", now)
 					run()
 					fmt.Printf(" --------------------[ end output   %s ]--------------------\n", now)
+					moontpl.luaPool.printLoadedModules()
 				})
 
 				_ = moontpl.startFsWatch()
 				run()
 				fmt.Printf(" --------------------[ output %s ]--------------------\n", time.Now().Local().Format("15:04:05"))
+				moontpl.luaPool.printLoadedModules()
 
 				<-make(chan struct{})
 			} else {
@@ -209,9 +216,16 @@ func ExecuteCLI() {
 			moontpl.AddRunTags("serve", "autoreload")
 
 			moontpl.fsWatcher.On(func(filename string) {
-				modname := filepath.Base(filename)
-				modname = strings.TrimSuffix(modname, filepath.Ext(modname))
+				var modname string
+				if !isSubDirectory(moontpl.SiteDir, filename) {
+					filename = path.Base(filename)
+					modname = getModuleName(moontpl.SiteDir, filename)
+				} else {
+					modname = getModuleName(moontpl.SiteDir, filename)
+				}
+
 				moontpl.luaPool.resetLoadedPoolModules(modname)
+
 			})
 
 			if !isDirectory(moontpl.SiteDir) {
