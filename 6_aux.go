@@ -2,13 +2,10 @@ package moontpl
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"github.com/samber/lo"
@@ -66,28 +63,6 @@ func isSubDirectory(base, sub string) bool {
 		base += string(os.PathSeparator)
 	}
 	return strings.HasPrefix(sub, base)
-}
-
-func respondInternalError(w http.ResponseWriter, err error) {
-	w.Header().Add("Content-Type", "text/html")
-	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprintf(w, `
-<!DOCTYPE html>
-<html>
-<pre>
-%v
-</pre>
-<style>
-body {
-	font-size: 21px;
-	color: #f00;
-	background: #222;
-} 
-</style>
-</html>
-	`, err)
-	log.Print(err)
-	debug.PrintStack()
 }
 
 func apply1[A, B any](x A, f1 func(A) B) B {
