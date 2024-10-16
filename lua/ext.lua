@@ -297,4 +297,24 @@ function P.partial(fn, ...)
     end
 end
 
+function P.find(t, item)
+    local result = nil
+    for i, x in ipairs(t) do
+        if x == item then
+            return x, i
+        end
+    end
+    return nil
+end
+
+function P.findBy(t, pred)
+    local result = nil
+    for i, x in ipairs(t) do
+        if pred(x, i) then
+            return x, i
+        end
+    end
+    return nil
+end
+
 return P

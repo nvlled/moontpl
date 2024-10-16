@@ -344,6 +344,7 @@ local function importGlobals()
     TITLE = Node "title"
     BODY = Node "body"
     SCRIPT = Node("script", {noHTMLEscape = true})
+    NOSCRIPT = Node("noscript")
     LINK = Node("link", {selfClosing = true})
     STYLE = Node("style", {noHTMLEscape = true})
     META = Node("meta", {selfClosing = true})
@@ -392,6 +393,7 @@ local function importGlobals()
 
     BR = Node("br", {selfClosing = true})
     HR = Node("hr", {selfClosing = true})
+    NBSP = Node("", {noHTMLEscape=true})("&nbsp;")
 
     -- lol?
     __ = HR
