@@ -157,6 +157,7 @@ func (m *Moontpl) createState(initModules ...bool /* = true */) *lua.LState {
 	L := lua.NewState(lua.Options{
 		SkipOpenLibs:        true,
 		IncludeGoStackTrace: true,
+		RegistryMaxSize:     1024 * 1024,
 	})
 
 	m.openLibs(L)
