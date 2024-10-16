@@ -103,7 +103,7 @@ local function textContent(node)
         elseif not sub then
             return ""
         end
-        return nodeToString(sub, level)
+        return textContent(sub)
     end), "")
 end
 
@@ -312,23 +312,29 @@ local function component(ctor, tagName, options)
 end
 
 local pp = component(function(attrs, children)
-    local result = {}
+    local p = P()
+    local result = {p}
     for _, c in ipairs(children) do
         local t = type(c)
         if t == "string" then
             for line in ext.lines(c) do
+                line = ext.trim(line)
                 if line == "" then
-                    table.insert(result, BR)
+                    p = P()
+                    table.insert(result, p)
                 else
-                    table.insert(result, line)
-                    table.insert(result, BR)
+                    table.insert(p.children, line)
+                    table.insert(p.children, " ")
                 end
             end
         else
-            table.insert(result, c)
+            table.insert(p.children, c)
         end
     end
-    return P(result)
+    
+    local node = FRAGMENT(result)
+    node.attrs = attrs
+    return node
 end)
 
 local function importGlobals()
