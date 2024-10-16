@@ -2,12 +2,14 @@ package moontpl
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 )
 
@@ -74,4 +76,36 @@ func (m *Moontpl) createHTTPHandler() http.Handler {
 			respondInternalError(w, err)
 		}
 	})
+}
+
+func respondInternalError(w http.ResponseWriter, err error) {
+	w.Header().Add("Content-Type", "text/html")
+	w.WriteHeader(http.StatusInternalServerError)
+	fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+<pre>
+%v
+</pre>
+<style>
+pre {
+	white-space: pre-wrap;
+}         
+body {
+	font-size: 18px;
+	color: #f00;
+	background: #222;
+}
+</style>
+<script>
+	window.addEventListener("load", function() {
+		new EventSource('/.modified').onmessage = function(event) {
+			window.location.reload();
+		};
+	});
+</script>
+</html>
+	`, err)
+	log.Print(err)
+	debug.PrintStack()
 }
