@@ -43,8 +43,8 @@ local function styleToString(t)
     for key, value in pairs(t) do
         if type(key) == "string" then
             if type(value) == "number" then
-                table.insert(declarations, underscore2Dash(key) .. ": " ..
-                                 tostring(value) .. "px")
+                table.insert(declarations, underscore2Dash(key) .. ": "
+                                 .. tostring(value) .. "px")
             else
                 table.insert(declarations, underscore2Dash(key) .. ": " .. value)
             end
@@ -65,13 +65,13 @@ local function attrsToString(attrs)
         if type(k) == "string" then
             k = attrEscape(underscore2Dash(k))
             if k == "style" and type(v) == "table" then
-                table.insert(entries, underscore2Dash(k) .. "=" .. '"' ..
-                                 attrEscape(styleToString(v)) .. '"')
+                table.insert(entries, underscore2Dash(k) .. "=" .. '"'
+                                 .. attrEscape(styleToString(v)) .. '"')
             elseif type(v) == "boolean" then
                 table.insert(entries, underscore2Dash(k))
             else
-                table.insert(entries, underscore2Dash(k) .. "=" .. '"' ..
-                                 attrEscape(tostring(v)) .. '"')
+                table.insert(entries, underscore2Dash(k) .. "=" .. '"'
+                                 .. attrEscape(tostring(v)) .. '"')
             end
         end
     end
@@ -122,8 +122,8 @@ local function nodeToString(node, level)
     if node.options.selfClosing then
         if not node.children or #node.children == 0 then
             local tag = node.tag or ""
-            return prefix .. "<" .. tag .. attrsToString(node.attrs) .. "/>" ..
-                       suffix
+            return prefix .. "<" .. tag .. attrsToString(node.attrs) .. "/>"
+                       .. suffix
         end
     end
 
@@ -145,9 +145,8 @@ local function nodeToString(node, level)
         return body
     end
 
-    return
-        prefix .. "<" .. node.tag .. attrsToString(node.attrs) .. ">" .. body ..
-            "</" .. node.tag .. ">" .. suffix
+    return prefix .. "<" .. node.tag .. attrsToString(node.attrs) .. ">" .. body
+               .. "</" .. node.tag .. ">" .. suffix
 end
 
 local appendChild = function(a, b)
@@ -173,24 +172,28 @@ local appendSibling = function(a, b)
 end
 
 nodeMeta = {
-    __textContent = textContent;
-    __tostring = nodeToString;
-    __div = appendChild;
-    __pow = appendChild;
-    __call = function(_,a,b) return appendChild(a, b) end;
+    __textContent=textContent;
+    __tostring=nodeToString;
+    __div=appendChild;
+    __pow=appendChild;
+    __call=function(_, a, b)
+        return appendChild(a, b)
+    end;
 }
+
+local NODESYM = {}
 
 local function _node(tagName, args, options)
     options = options or {}
 
     if type(args) == "string" then
         local result = {
-            tag = tagName;
-            attrs = {};
-            children = {args};
-            options = options;
-            data = {};
-            parent = nil;
+            tag=tagName;
+            attrs={};
+            children={args};
+            options=options;
+            data={};
+            parent=nil;
         }
         setmetatable(result, nodeMeta)
         return result
@@ -275,16 +278,16 @@ local function _node(tagName, args, options)
 end
 
 ctorMeta = {
-    __call = function(self, args)
+    __call=function(self, args)
         return self.ctor(args)
     end;
-    __pow = function(self, args)
+    __pow=function(self, args)
         return self.ctor(args)
     end;
-    __div = function(self, args)
+    __div=function(self, args)
         return self.ctor(args)
     end;
-    __idiv = function(self, args)
+    __idiv=function(self, args)
         return self.ctor(args)
     end;
 }
@@ -298,7 +301,7 @@ local function Node(tagName, options)
         local result = _node(tagName, args, options)
         return result
     end
-    return setmetatable({ctor = ctor}, ctorMeta)
+    return setmetatable({ctor=ctor}, ctorMeta)
 end
 
 local function component(ctor, tagName, options)
@@ -338,19 +341,19 @@ local pp = component(function(attrs, children)
 end)
 
 local function importGlobals()
-    HTML = Node("html", {prefix = "<!DOCTYPE html>"})
+    HTML = Node("html", {prefix="<!DOCTYPE html>"})
 
     HEAD = Node "head"
     TITLE = Node "title"
     BODY = Node "body"
-    SCRIPT = Node("script", {noHTMLEscape = true})
+    SCRIPT = Node("script", {noHTMLEscape=true})
     NOSCRIPT = Node("noscript")
-    LINK = Node("link", {selfClosing = true})
-    STYLE = Node("style", {noHTMLEscape = true})
-    META = Node("meta", {selfClosing = true})
+    LINK = Node("link", {selfClosing=true})
+    STYLE = Node("style", {noHTMLEscape=true})
+    META = Node("meta", {selfClosing=true})
 
     A = Node "a"
-    BASE = Node("base", {selfClosing = true})
+    BASE = Node("base", {selfClosing=true})
 
     P = Node "p"
     DIV = Node "div"
@@ -375,7 +378,7 @@ local function importGlobals()
     LI = Node "li"
 
     FORM = Node "form"
-    INPUT = Node("input", {selfClosing = true})
+    INPUT = Node("input", {selfClosing=true})
     TEXTAREA = Node "textarea"
     BUTTON = Node "button"
     LABEL = Node "label"
@@ -385,14 +388,14 @@ local function importGlobals()
     TABLE = Node "table"
     THEAD = Node "thead"
     TBODY = Node "tbody"
-    COL = Node("col", {selfClosing = true})
+    COL = Node("col", {selfClosing=true})
     TR = Node "tr"
     TD = Node "td"
 
     SVG = Node "svg"
 
-    BR = Node("br", {selfClosing = true})
-    HR = Node("hr", {selfClosing = true})
+    BR = Node("br", {selfClosing=true})
+    HR = Node("hr", {selfClosing=true})
     NBSP = Node("", {noHTMLEscape=true})("&nbsp;")
 
     -- lol?
@@ -418,14 +421,14 @@ local function importGlobals()
     H5 = Node "h5"
     H6 = Node "h6"
 
-    IMG = Node("img", {selfClosing = true})
-    AREA = Node("area", {selfClosing = true})
+    IMG = Node("img", {selfClosing=true})
+    AREA = Node("area", {selfClosing=true})
 
     VIDEO = Node "video"
     IFRAME = Node "iframe"
-    EMBED = Node("embed", {selfClosing = true})
-    TRACK = Node("track", {selfClosing = true})
-    SOURCE = Node("source", {selfClosing = true})
+    EMBED = Node("embed", {selfClosing=true})
+    TRACK = Node("track", {selfClosing=true})
+    SOURCE = Node("source", {selfClosing=true})
 
     FRAGMENT = Node ""
 
@@ -443,16 +446,16 @@ function markdown(...)
 end
 
 local inlineNodes = {
-    a = true;
-    b = true;
-    i = true;
-    s = true;
-    span = true;
-    small = true;
-    em = true;
-    strong = true;
-    code = true;
-    label = true;
+    a=true;
+    b=true;
+    i=true;
+    s=true;
+    span=true;
+    small=true;
+    em=true;
+    strong=true;
+    code=true;
+    label=true;
 }
 
 -- TODO: shit kludgey code, please refactor later
@@ -473,8 +476,8 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
 
     local function prevNewline()
         local prevSibling = parent and parent.children[index - 1] or {}
-        local isPrevBlock = not (type(prevSibling) == "string" or
-                                inlineNodes[prevSibling.tag])
+        local isPrevBlock = not (type(prevSibling) == "string"
+                                or inlineNodes[prevSibling.tag])
         local isCurBlock = not (type(node) == "string" or inlineNodes[node.tag])
 
         if isPrevBlock or isCurBlock then
@@ -549,8 +552,8 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
     elseif node.tag == "li" then
         local result = ext.map(node.children, function(sub, i)
             if sub.tag == "ul" or sub.tag == "ol" then
-                return prevNewline() ..
-                           ext.indent(
+                return prevNewline()
+                           .. ext.indent(
                                toMarkdown(sub, node, level, i,
                                           preserveLineBreaks), (level + 1) * 3)
             else
@@ -559,9 +562,8 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
                                                  preserveLineBreaks),
                                       (level + 1) * 3, i) .. ""
                 else
-                    return
-                        toMarkdown(sub, node, level, i, preserveLineBreaks) ..
-                            " "
+                    return toMarkdown(sub, node, level, i, preserveLineBreaks)
+                               .. " "
                 end
             end
         end)
@@ -575,19 +577,18 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
                     prefix = "\n"
                 end
                 local dash = ordered and "1. " or "-  "
-                return prefix .. dash ..
-                           toMarkdown(sub, node, level, i, preserveLineBreaks) ..
-                           "\n"
+                return prefix .. dash
+                           .. toMarkdown(sub, node, level, i, preserveLineBreaks)
+                           .. "\n"
             else
-                return
-                    toMarkdown(sub, node, level + 1, i, preserveLineBreaks) ..
-                        (i < #node.children and " " or "")
+                return toMarkdown(sub, node, level + 1, i, preserveLineBreaks)
+                           .. (i < #node.children and " " or "")
             end
         end)
         return ext.trimRight(prevNewline() .. table.concat(result, ""))
     elseif node.tag == "img" then
-        return prevNewline() .. "![" .. (node.attrs.alt or "") .. "](" ..
-                   node.attrs.src .. ")"
+        return prevNewline() .. "![" .. (node.attrs.alt or "") .. "]("
+                   .. node.attrs.src .. ")"
     elseif node.tag == "code" then
         if parent and parent.tag == "pre" then
             local lang = node.data.lang or ""
@@ -607,9 +608,9 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
 end
 
 return {
-    Node = Node;
-    toMarkdown = toMarkdown;
-    importGlobals = importGlobals;
-    textContent = textContent;
-    Component = component;
+    Node=Node;
+    toMarkdown=toMarkdown;
+    importGlobals=importGlobals;
+    textContent=textContent;
+    Component=component;
 }
