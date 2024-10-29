@@ -108,7 +108,7 @@ local function textContent(node)
 end
 
 local function nodeToString(node, level)
-    if not node or not node.tag then
+    if not node or type(node) ~= "table" or not node.tag then
         return ""
     end
 
@@ -213,12 +213,13 @@ local function _node(tagName, args, options)
     end
 
     local result = {
-        tag = tagName;
-        attrs = attrs;
-        children = children;
-        options = options;
-        data = data;
-        parent = nil;
+        tag=tagName;
+        attrs=attrs;
+        children=children;
+        options=options;
+        data=data;
+        parent=nil;
+        [NODESYM]=true;
     }
     setmetatable(result, nodeMeta)
 
@@ -246,12 +247,12 @@ local function _node(tagName, args, options)
             elseif type(v) == "table" then
                 local mt = getmetatable(v)
 
-                if mt == nodeMeta then
+                if mt == nodeMeta or v[NODESYM] then
                     v.parent = result
                     table.insert(children, v)
                 elseif mt and mt == ctorMeta then
                     local child = v()
-                    if getmetatable(child) == nodeMeta then
+                    if getmetatable(child) == nodeMeta or v[NODESYM] then
                         child.parent = result
                     end
                     table.insert(children, child)
@@ -304,40 +305,68 @@ local function Node(tagName, options)
     return setmetatable({ctor=ctor}, ctorMeta)
 end
 
-local function component(ctor, tagName, options)
+local function component(ctor)
     local Comp = Node(tagName or "div")
     return setmetatable({
-        ctor = function(args)
-            local node = Comp(args)
-            return ctor(node.attrs, node.children)
+        ctor=function(args)
+            return ctor(args)
         end;
     }, ctorMeta)
 end
 
-local pp = component(function(attrs, children)
-    local p = P()
-    local result = {p}
-    for _, c in ipairs(children) do
+local pp = component(function(args)
+    local node = FRAGMENT(args)
+    local attrs, children = node.attrs, node.children
+    local p = P(attrs)
+    local paras = {p}
+
+    local function addElem(c)
         local t = type(c)
         if t == "string" then
             for line in ext.lines(c) do
-                line = ext.trim(line)
                 if line == "" then
-                    p = P()
-                    table.insert(result, p)
+                    if #p.children > 0 then
+                        p = P(attrs)
+                        table.insert(paras, p)
+                        table.insert(p.children, "\n")
+                    end
                 else
+                    if #p.children > 0 and type(p.children[#p.children])
+                        == "string" then
+                        table.insert(p.children, "\n")
+                    end
                     table.insert(p.children, line)
-                    table.insert(p.children, " ")
                 end
             end
         else
             table.insert(p.children, c)
         end
     end
-    
-    local node = FRAGMENT(result)
-    node.attrs = attrs
-    return node
+
+    for _, c in ipairs(children) do
+        addElem(c)
+    end
+
+    node.children = paras
+
+    return setmetatable(node, {
+        __div=function(a, c)
+            addElem(c)
+            return a
+        end;
+    })
+
+    -- local mt = {}
+    -- for k,v in pairs(nodeMeta) do
+    --     mt[k] = v
+    -- end
+    -- mt.__div = function(a, b)
+    --         print("huh", a, b)
+    --         table.insert(p.children, b)
+    --         return a
+    --     end
+
+    -- return setmetatable(node, mt)
 end)
 
 local function importGlobals()
