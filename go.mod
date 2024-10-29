@@ -14,8 +14,9 @@ require (
 
 require (
 	github.com/alexflint/go-scalar v1.2.0 // indirect
+	github.com/nvlled/htmlformat v0.1.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/net v0.0.0-20190327091125-710a502c58a2 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 )

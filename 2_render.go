@@ -1,6 +1,7 @@
 package moontpl
 
 import (
+	"github.com/nvlled/htmlformat"
 	"github.com/yosssi/gohtml"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -39,7 +40,10 @@ func (m *Moontpl) RenderString(luaCode string) (string, error) {
 		return "", nil
 	}
 
-	return L.ToStringMeta(lv).String(), nil
+	output := L.ToStringMeta(lv).String()
+	output = htmlformat.Format(output)
+
+	return output, nil
 }
 
 func (m *Moontpl) renderFile(L *lua.LState, filename string) (lua.LValue, error) {
