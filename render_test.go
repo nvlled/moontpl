@@ -123,7 +123,6 @@ return FRAGMENT {
 }
 
 func TestMultilineParagraphs(t *testing.T) {
-	// TODO: collapse whitespace
 	testRender(t, Data{
 		code: `
 require("html").importGlobals()
@@ -139,10 +138,24 @@ return FRAGMENT {
 		Third paragraph.
 
 		Fourth ]] / EM "paragraph.";
+
+	PP [[
+	aaaaaaa
+	bbbbbbb
+    
+	ccccccc
+	ddddddd
+
+	eeeeee ffff
+	
+	ggggggggg
+	]]
 }
 	`,
 		expected: `
-<p class="para">This is a paragraph.</p>
+<p class="para">
+    This is a paragraph.
+</p>
 <p class="para">
     This is another paragraph.
     This one is a <a href="localhost">link</a>.
@@ -152,6 +165,22 @@ return FRAGMENT {
 </p>
 <p class="para">
     Fourth <em>paragraph.</em>
+</p>
+<p>
+    aaaaaaa
+    bbbbbbb
+</p>
+<p>
+    ccccccc
+    ddddddd
+</p>
+<p>
+    eeeeee ffff
+</p>
+<p>
+    ggggggggg
+</p>
+<p>
 </p>
 	`})
 

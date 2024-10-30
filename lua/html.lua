@@ -215,6 +215,7 @@ local function _node(tagName, args, options)
             options=options;
             data={};
             parent=nil;
+            [NODESYM]=true;
         }
         setmetatable(result, nodeMeta)
         return result
@@ -378,23 +379,28 @@ local pp = html.Component(function(args)
     local attrs, children = node.attrs, node.children
     local p = P(attrs)
     local paras = {p}
+    
+    table.insert(p.children, "\n")
 
     local function addElem(c)
         local t = type(c)
         if t == "string" then
+            local lastLineBlank = false
             for line in ext.lines(c) do
-                if line == "" then
-                    if #p.children > 0 then
+                if ext.trim(line) == "" then
+                    if #p.children > 0 and not lastLineBlank then
                         p = P(attrs)
                         table.insert(paras, p)
                         table.insert(p.children, "\n")
                     end
+                    lastLineBlank = true
                 else
                     if #p.children > 0 and type(p.children[#p.children])
                         == "string" then
                         table.insert(p.children, "\n")
                     end
                     table.insert(p.children, line)
+                    lastLineBlank = false
                 end
             end
         else
