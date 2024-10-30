@@ -3,7 +3,7 @@ package moontpl
 import "testing"
 
 func TestExtract(t *testing.T) {
-	docs, ok, err := extractDocumentation("./lua/html.lua")
+	docs, ok, err := moontpl.extractDocumentation("lua/html.lua")
 	if err != nil {
 		panic(err)
 	}

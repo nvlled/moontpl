@@ -21,12 +21,14 @@ const (
 )
 
 type Moontpl struct {
-	SiteDir     string
-	Command     int
-	luaModules  map[string]ModMap
-	luaGlobals  map[string]any
+	SiteDir    string
+	Command    int
+	luaModules map[string]ModMap
+	luaGlobals map[string]any
+	runtags    map[string]struct{}
+
 	fileSystems []fs.FS
-	runtags     map[string]struct{}
+	fsys        fs.FS
 
 	builder   *siteBuilder
 	fsWatcher *FsWatcher
@@ -69,6 +71,7 @@ type LuaModule interface {
 
 func (m *Moontpl) AddFs(fsys fs.FS) {
 	m.fileSystems = append(m.fileSystems, fsys)
+	m.fsys = mergefs.Merge(m.fileSystems...)
 }
 
 func (m *Moontpl) SetGlobal(varname string, obj any) {
@@ -175,8 +178,7 @@ func (m *Moontpl) createState(initModules ...bool /* = true */) *lua.LState {
 	}
 
 	// allow loading lua modules from fs.Fs (mainly for embedded files)
-	fsys := mergefs.Merge(m.fileSystems...)
-	initFsLoader(L, fsys)
+	initFsLoader(L, moontpl.fsys)
 
 	return L
 }

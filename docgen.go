@@ -3,8 +3,8 @@ package moontpl
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"iter"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -13,8 +13,8 @@ import (
 
 const luaDocMarker = "---"
 
-func extractDocumentation(filename string) (string, bool, error) {
-	contents, err := os.ReadFile(filename)
+func (m *Moontpl) extractDocumentation(filename string) (string, bool, error) {
+	contents, err := fs.ReadFile(m.fsys, filename)
 	if err != nil {
 		return "", false, err
 	}

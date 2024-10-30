@@ -3,6 +3,7 @@ package moontpl
 import (
 	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path"
@@ -111,29 +112,25 @@ func ExecuteCLI() {
 		if args.LuaDoc.Module != "" {
 			module := args.LuaDoc.Module
 			filename := filepath.Join("lua", module+".lua")
-			println(filename)
-			if !fsExists(filename) {
-				println("unknown module:", args.LuaDoc.Module)
+
+			doc, ok, err := moontpl.extractDocumentation(filename)
+			if err != nil {
+				println("failed to get documentation:", err.Error())
+				os.Exit(-1)
+			}
+			if ok {
+				fmt.Print(doc)
 			} else {
-				doc, ok, err := extractDocumentation(filename)
-				if err != nil {
-					println("failed to get documentation:", err.Error())
-					os.Exit(-1)
-				}
-				if ok {
-					fmt.Print(doc)
-				} else {
-					println("no documentation found for", module)
-				}
+				println("no documentation found for", module)
 			}
 		} else {
-			entries, err := filepath.Glob("./lua/*.lua")
+			entries, err := fs.Glob(moontpl.fsys, "lua/*.lua")
 			if err != nil {
 				println("failed to get read dir:", err.Error())
 				os.Exit(-1)
 			}
 			for _, filename := range entries {
-				doc, ok, err := extractDocumentation(filename)
+				doc, ok, err := moontpl.extractDocumentation(filename)
 				if err != nil {
 					println("failed to get documentation:", err.Error())
 					os.Exit(-1)
