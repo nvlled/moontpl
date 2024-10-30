@@ -2,9 +2,7 @@
 
 ![](sample.png)
 
-**moontpl**
-
- is a [templating engine](https://en.wikipedia.org/wiki/Template_processor) that uses lua DSL to generate HTML/CSS/Markdown files.
+**moontpl** is a [templating engine](https://en.wikipedia.org/wiki/Template_processor) that uses lua DSL to generate HTML/CSS/Markdown files.
 
 -----------------
 

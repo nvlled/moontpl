@@ -10,9 +10,9 @@ import (
 )
 
 type PagePath struct {
-	AbsFile string
-	RelFile string
-	Link    string
+	AbsFile string `luar:"absFile"`
+	RelFile string `luar:"relFile"`
+	Link    string `luar:"link"`
 }
 
 type Page struct {

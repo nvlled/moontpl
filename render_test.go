@@ -2,34 +2,9 @@ package moontpl
 
 import (
 	"fmt"
-	"iter"
 	"strings"
 	"testing"
 )
-
-func printComparison(expected, actual string) {
-	s := fmt.Sprintf("\n------[expected]------ \n%s\n------[ actual ]------\n%s", expected, actual)
-	println(s)
-}
-
-type Data struct {
-	code     string
-	expected string
-}
-
-func testRender(t *testing.T, data Data) {
-	output, err := New().RenderString(data.code)
-	if err != nil {
-		t.Errorf("failed to execute lua: %s\n%s", err, data.code)
-	}
-	output = strings.TrimSpace(output)
-	expected := strings.TrimSpace(data.expected)
-
-	if expected != output {
-		t.Errorf("unexpected output")
-		printComparison(expected, output)
-	}
-}
 
 func TestSimple(t *testing.T) {
 	testRender(t, Data{code: `
@@ -193,19 +168,26 @@ func TestBuildHook(t *testing.T) {
 	}
 }
 
-func getLines(s string) iter.Seq[string] {
-	return func(yield func(string) bool) {
-		a := 0
-		for a < len(s) {
-			b := a
-			for ; b < len(s); b++ {
-				if s[b] == '\n' {
-					b++
-					break
-				}
-			}
-			yield(s[a:b])
-			a = b + 1
-		}
+func printComparison(expected, actual string) {
+	s := fmt.Sprintf("\n------[expected]------ \n%s\n------[ actual ]------\n%s", expected, actual)
+	println(s)
+}
+
+type Data struct {
+	code     string
+	expected string
+}
+
+func testRender(t *testing.T, data Data) {
+	output, err := New().RenderString(data.code)
+	if err != nil {
+		t.Errorf("failed to execute lua: %s\n%s", err, data.code)
+	}
+	output = strings.TrimSpace(output)
+	expected := strings.TrimSpace(data.expected)
+
+	if expected != output {
+		t.Errorf("unexpected output")
+		printComparison(expected, output)
 	}
 }

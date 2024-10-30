@@ -6,6 +6,7 @@ function P.trim(s)
     end
     return s:match "^%s*(.-)%s*$"
 end
+
 function P.trimRight(s)
     if not s then
         return ""

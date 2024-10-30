@@ -2,7 +2,6 @@ package moontpl
 
 import (
 	"github.com/nvlled/htmlformat"
-	"github.com/yosssi/gohtml"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -21,7 +20,7 @@ func (m *Moontpl) RenderFile(filename string) (string, error) {
 
 	output := L.ToStringMeta(lv).String()
 	if wholeExt(filename) == ".html.lua" {
-		output = gohtml.Format(output)
+		output = htmlformat.Format(output)
 	}
 
 	return output, nil

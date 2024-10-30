@@ -1,4 +1,22 @@
+local html = {}
 local ext = require "ext"
+local strict = require "strict"
+
+---@type Node { tag: string, children: (Node|string)[], attrs: { [string]: string } }
+--- Node is an object created from the functions DIV, P, H1 and so on.
+
+---@type { [string]: Node }
+html.common = {} ---
+--- This contains all the predefined, common nodes such
+--- as DIV, H1, P, A, and so on.
+--- Use html.importGlobals() to import all.
+---
+--- Example:
+---     local DIV = require("html").common.DIV
+---     DIV {
+---         P "hello"
+---     }
+
 
 local ctorMeta
 local nodeMeta
@@ -78,7 +96,10 @@ local function attrsToString(attrs)
     return " " .. table.concat(entries, " ")
 end
 
-local function textContent(node)
+---@return string
+function html.textContent(node)
+    --- Converts node into an HTML string.
+    --- html.textContent(node) is the same as node:tostring()
     if not node then
         return ""
     end
@@ -103,7 +124,7 @@ local function textContent(node)
         elseif not sub then
             return ""
         end
-        return textContent(sub)
+        return html.textContent(sub)
     end), "")
 end
 
@@ -172,7 +193,7 @@ local appendSibling = function(a, b)
 end
 
 nodeMeta = {
-    __textContent=textContent;
+    __textContent=html.textContent;
     __tostring=nodeToString;
     __div=appendChild;
     __pow=appendChild;
@@ -293,7 +314,45 @@ ctorMeta = {
     end;
 }
 
-local function Node(tagName, options)
+---@param tagName string
+---@param options? { selfClosing: string, noHTMLEscape: string }
+---@return Node
+function html.CreateNode(tagName, options) ---
+    --- Defines a node constructor. Common
+    --- html elements are already pre-defined,
+    --- and can be accessed with require("html").importGlobals()
+    --- 
+    --- `tagName` is the element name, such as body, or h1.
+    --- `options` is an optional table argument that
+    --- has the default fields:
+    --- {
+    ---     selfClosing = false;
+    ---     noHTMLEscape = false;
+    --- }
+    --- 
+    --- Example:
+    ---     local Node = require("html").CreateNode
+    ---     local H1 = Node "h1"
+    ---     local EM = Node "em"
+    ---     local DIV = Node "div"
+    ---     local WIDGET = Node "widget"
+    ---     
+    ---     print(DIV {
+    ---         EM "blah";
+    ---         H1 {
+    ---             EM "foo";
+    ---             "bar";
+    ---         };
+    ---         WIDGET {}
+    ---     })
+    ---     -- Outputs:
+    ---     <div>
+    ---         <em>blah</em>
+    ---         <h1>
+    ---             <em>foo</em> bar
+    ---         </h1>
+    ---         <widget></widget>
+    ---     </div>
     local ctor = function(args)
         args = args or {}
         if getmetatable(args) == ctorMeta then
@@ -305,8 +364,8 @@ local function Node(tagName, options)
     return setmetatable({ctor=ctor}, ctorMeta)
 end
 
-local function component(ctor)
-    local Comp = Node(tagName or "div")
+function html.Component(ctor, tagName)
+    local Comp = html.CreateNode(tagName or "div")
     return setmetatable({
         ctor=function(args)
             return ctor(args)
@@ -314,7 +373,7 @@ local function component(ctor)
     }, ctorMeta)
 end
 
-local pp = component(function(args)
+local pp = html.Component(function(args)
     local node = FRAGMENT(args)
     local attrs, children = node.attrs, node.children
     local p = P(attrs)
@@ -355,125 +414,128 @@ local pp = component(function(args)
             return a
         end;
     })
-
-    -- local mt = {}
-    -- for k,v in pairs(nodeMeta) do
-    --     mt[k] = v
-    -- end
-    -- mt.__div = function(a, b)
-    --         print("huh", a, b)
-    --         table.insert(p.children, b)
-    --         return a
-    --     end
-
-    -- return setmetatable(node, mt)
 end)
 
-local function importGlobals()
-    HTML = Node("html", {prefix="<!DOCTYPE html>"})
+local function initCommonNodes()
+    local Node = html.CreateNode
+    html.common = {
+        HTML=Node("html", {prefix="<!DOCTYPE html>"});
 
-    HEAD = Node "head"
-    TITLE = Node "title"
-    BODY = Node "body"
-    SCRIPT = Node("script", {noHTMLEscape=true})
-    NOSCRIPT = Node("noscript")
-    LINK = Node("link", {selfClosing=true})
-    STYLE = Node("style", {noHTMLEscape=true})
-    META = Node("meta", {selfClosing=true})
+        HEAD=Node "head";
+        TITLE=Node "title";
+        BODY=Node "body";
+        SCRIPT=Node("script", {noHTMLEscape=true});
+        NOSCRIPT=Node("noscript");
+        LINK=Node("link", {selfClosing=true});
+        STYLE=Node("style", {noHTMLEscape=true});
+        META=Node("meta", {selfClosing=true});
 
-    A = Node "a"
-    BASE = Node("base", {selfClosing=true})
+        A=Node "a";
+        BASE=Node("base", {selfClosing=true});
 
-    P = Node "p"
-    DIV = Node "div"
-    SPAN = Node "span"
-    PP = pp
+        P=Node "p";
+        DIV=Node "div";
+        SPAN=Node "span";
+        PP=pp;
 
-    DETAILS = Node "details"
-    SUMMARY = Node "summary"
+        DETAILS=Node "details";
+        SUMMARY=Node "summary";
 
-    B = Node "b"
-    I = Node "i"
-    EM = Node "em"
-    STRONG = Node "strong"
-    SMALL = Node "small"
-    S = Node "s"
-    PRE = Node "pre"
-    CODE = Node "code"
-    BLOCKQUOTE = Node "blockquote"
+        B=Node "b";
+        I=Node "i";
+        EM=Node "em";
+        STRONG=Node "strong";
+        SMALL=Node "small";
+        S=Node "s";
+        PRE=Node "pre";
+        CODE=Node "code";
+        BLOCKQUOTE=Node "blockquote";
 
-    OL = Node "ol"
-    UL = Node "ul"
-    LI = Node "li"
+        OL=Node "ol";
+        UL=Node "ul";
+        LI=Node "li";
 
-    FORM = Node "form"
-    INPUT = Node("input", {selfClosing=true})
-    TEXTAREA = Node "textarea"
-    BUTTON = Node "button"
-    LABEL = Node "label"
-    SELECT = Node "select"
-    OPTION = Node "option"
+        FORM=Node "form";
+        INPUT=Node("input", {selfClosing=true});
+        TEXTAREA=Node "textarea";
+        BUTTON=Node "button";
+        LABEL=Node "label";
+        SELECT=Node "select";
+        OPTION=Node "option";
 
-    TABLE = Node "table"
-    THEAD = Node "thead"
-    TBODY = Node "tbody"
-    COL = Node("col", {selfClosing=true})
-    TR = Node "tr"
-    TD = Node "td"
+        TABLE=Node "table";
+        THEAD=Node "thead";
+        TBODY=Node "tbody";
+        COL=Node("col", {selfClosing=true});
+        TR=Node "tr";
+        TD=Node "td";
 
-    SVG = Node "svg"
+        SVG=Node "svg";
 
-    BR = Node("br", {selfClosing=true})
-    HR = Node("hr", {selfClosing=true})
-    NBSP = Node("", {noHTMLEscape=true})("&nbsp;")
+        BR=Node("br", {selfClosing=true});
+        HR=Node("hr", {selfClosing=true});
+        NBSP=Node("", {noHTMLEscape=true})("&nbsp;");
 
-    -- lol?
-    __ = HR
-    ___ = HR
-    ____ = HR
-    _____ = HR
-    ______ = HR
-    _______ = HR
-    ________ = HR
-    _________ = HR
-    __________ = HR
-    ___________ = HR
-    ____________ = HR
-    _____________ = HR
-    ______________ = HR
-    _______________ = HR
+        -- lol?
+        __=HR;
+        ___=HR;
+        ____=HR;
+        _____=HR;
+        ______=HR;
+        _______=HR;
+        ________=HR;
+        _________=HR;
+        __________=HR;
+        ___________=HR;
+        ____________=HR;
+        _____________=HR;
+        ______________=HR;
+        _______________=HR;
 
-    H1 = Node "h1"
-    H2 = Node "h2"
-    H3 = Node "h3"
-    H4 = Node "h4"
-    H5 = Node "h5"
-    H6 = Node "h6"
+        H1=Node "h1";
+        H2=Node "h2";
+        H3=Node "h3";
+        H4=Node "h4";
+        H5=Node "h5";
+        H6=Node "h6";
 
-    IMG = Node("img", {selfClosing=true})
-    AREA = Node("area", {selfClosing=true})
+        IMG=Node("img", {selfClosing=true});
+        AREA=Node("area", {selfClosing=true});
 
-    VIDEO = Node "video"
-    IFRAME = Node "iframe"
-    EMBED = Node("embed", {selfClosing=true})
-    TRACK = Node("track", {selfClosing=true})
-    SOURCE = Node("source", {selfClosing=true})
+        VIDEO=Node "video";
+        IFRAME=Node "iframe";
+        EMBED=Node("embed", {selfClosing=true});
+        TRACK=Node("track", {selfClosing=true});
+        SOURCE=Node("source", {selfClosing=true});
 
-    FRAGMENT = Node ""
+        FRAGMENT=Node "";
 
-    MARKDOWN = markdown
-    TRUNCATE = truncateRest
+        TRUNCATE=truncateRest;
+
+        MARKDOWN=html.toMarkdown;
+    }
 end
 
-function markdown(...)
-    local body = {}
-    for _, elem in ipairs({...}) do
-        table.insert(body, elem)
+---@return nil
+function html.importGlobals()
+    --- Adds all pre-defined HTML functions into the global scope.
+    --- 
+    --- Example:
+    ---     -- in web.lua file
+    ---     require("html").importGlobals()
+    ---     
+    ---     -- in example.lua file
+    ---     require("web")
+    ---     -- functions can now be used without explicity importing
+    ---     print(DIV { "blah" })
+    strict.disable()
+    local Node = html.CreateNode
+    for k, v in pairs(html.common) do
+        _G[k] = v
     end
-    local result = ext.trim(toMarkdown(FRAGMENT(body))):gsub("\n\n\n+", "\n\n")
-    return result
-end
 
+    strict.enable()
+end
 local inlineNodes = {
     a=true;
     b=true;
@@ -487,8 +549,8 @@ local inlineNodes = {
     label=true;
 }
 
--- TODO: shit kludgey code, please refactor later
-function toMarkdown(node, parent, level, index, preserveLineBreaks)
+local function _toMarkdown(node, parent, level, index, preserveLineBreaks)
+    -- TODO: shit kludgey code, please refactor later
     if not node then
         return nil
     end
@@ -542,8 +604,8 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
             elseif not sub then
                 table.insert(result, "")
             else
-                table.insert(result, toMarkdown(sub, node, level, i,
-                                                preserveLineBreaks))
+                table.insert(result, _toMarkdown(sub, node, level, i,
+                                                 preserveLineBreaks))
             end
         end
         local v = (table.concat(result, ""))
@@ -583,15 +645,15 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
             if sub.tag == "ul" or sub.tag == "ol" then
                 return prevNewline()
                            .. ext.indent(
-                               toMarkdown(sub, node, level, i,
-                                          preserveLineBreaks), (level + 1) * 3)
+                               _toMarkdown(sub, node, level, i,
+                                           preserveLineBreaks), (level + 1) * 3)
             else
                 if i > 1 and node.children[i - 1].tag == "ul" then
-                    return ext.indent(toMarkdown(sub, node, level,
-                                                 preserveLineBreaks),
+                    return ext.indent(_toMarkdown(sub, node, level,
+                                                  preserveLineBreaks),
                                       (level + 1) * 3, i) .. ""
                 else
-                    return toMarkdown(sub, node, level, i, preserveLineBreaks)
+                    return _toMarkdown(sub, node, level, i, preserveLineBreaks)
                                .. " "
                 end
             end
@@ -607,10 +669,10 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
                 end
                 local dash = ordered and "1. " or "-  "
                 return prefix .. dash
-                           .. toMarkdown(sub, node, level, i, preserveLineBreaks)
-                           .. "\n"
+                           .. _toMarkdown(sub, node, level, i,
+                                          preserveLineBreaks) .. "\n"
             else
-                return toMarkdown(sub, node, level + 1, i, preserveLineBreaks)
+                return _toMarkdown(sub, node, level + 1, i, preserveLineBreaks)
                            .. (i < #node.children and " " or "")
             end
         end)
@@ -636,10 +698,15 @@ function toMarkdown(node, parent, level, index, preserveLineBreaks)
     return tostring(node)
 end
 
-return {
-    Node=Node;
-    toMarkdown=toMarkdown;
-    importGlobals=importGlobals;
-    textContent=textContent;
-    Component=component;
-}
+---@type node table
+---@return string
+function html.toMarkdown(node)
+    --- Converts a node into markdown string
+    local result = ext.trim(_toMarkdown(FRAGMENT(node))):gsub("\n\n\n+", "\n\n")
+    return result
+end
+
+
+initCommonNodes()
+
+return html

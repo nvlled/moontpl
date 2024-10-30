@@ -48,13 +48,18 @@ type serveCmd struct {
 	Port    int    `help:"HTTP port to use" default:"9876"`
 }
 
+type luaDocCmd struct {
+	Module string `arg:"positional" help:"show documentation for the module"`
+}
+
 type cliArgs struct {
-	Build *buildCmd `arg:"subcommand:build"`
-	Run   *runCmd   `arg:"subcommand:run"`
-	Serve *serveCmd `arg:"subcommand:serve"`
+	Build  *buildCmd  `arg:"subcommand:build"`
+	Run    *runCmd    `arg:"subcommand:run"`
+	Serve  *serveCmd  `arg:"subcommand:serve"`
+	LuaDoc *luaDocCmd `arg:"subcommand:luadoc"`
 
 	LuaDir []string `arg:"-l,separate" help:"directories where to find lua files with require(), automatically includes SITEDIR"`
-	RunTag []string `arg:"-l,separate" help:"runtime tags to include in the lua environment"`
+	RunTag []string `arg:"-t,separate" help:"runtime tags to include in the lua environment"`
 }
 
 var args cliArgs
@@ -96,9 +101,49 @@ func ExecuteCLI() {
 		moontpl.AddLuaDir(mustAbs(p))
 	}
 
+	moontpl.AddRunTags(args.RunTag...)
+
 	switch {
 	default:
 		showHelp(p)
+
+	case args.LuaDoc != nil:
+		if args.LuaDoc.Module != "" {
+			module := args.LuaDoc.Module
+			filename := filepath.Join("lua", module+".lua")
+			println(filename)
+			if !fsExists(filename) {
+				println("unknown module:", args.LuaDoc.Module)
+			} else {
+				doc, ok, err := extractDocumentation(filename)
+				if err != nil {
+					println("failed to get documentation:", err.Error())
+					os.Exit(-1)
+				}
+				if ok {
+					fmt.Print(doc)
+				} else {
+					println("no documentation found for", module)
+				}
+			}
+		} else {
+			entries, err := filepath.Glob("./lua/*.lua")
+			if err != nil {
+				println("failed to get read dir:", err.Error())
+				os.Exit(-1)
+			}
+			for _, filename := range entries {
+				doc, ok, err := extractDocumentation(filename)
+				if err != nil {
+					println("failed to get documentation:", err.Error())
+					os.Exit(-1)
+				}
+				if ok {
+					fmt.Println(doc)
+					fmt.Print("\n\n")
+				}
+			}
+		}
 
 	case args.Run != nil:
 		{
@@ -149,13 +194,11 @@ func ExecuteCLI() {
 					fmt.Printf(" --------------------[ start output %s ]--------------------\n", now)
 					run()
 					fmt.Printf(" --------------------[ end output   %s ]--------------------\n", now)
-					moontpl.luaPool.printLoadedModules()
 				})
 
 				_ = moontpl.startFsWatch()
 				run()
 				fmt.Printf(" --------------------[ output %s ]--------------------\n", time.Now().Local().Format("15:04:05"))
-				moontpl.luaPool.printLoadedModules()
 
 				<-make(chan struct{})
 			} else {

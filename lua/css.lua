@@ -1,13 +1,20 @@
+local strict = require("strict")
 local ext = require "ext"
 
-local function trim(s) return s:match "^%s*(.-)%s*$" end
+local css = {}
 
-local function underscore2Dash(s) return string.gsub(s, "_", "-") end
+local function underscore2Dash(s)
+    return string.gsub(s, "_", "-")
+end
 
 local function sortTable(t)
     local result = {}
-    for k, v in pairs(t) do table.insert(result, {k = k; v = v}) end
-    table.sort(result, function(a, b) return a.k < b.k end)
+    for k, v in pairs(t) do
+        table.insert(result, {k=k; v=v})
+    end
+    table.sort(result, function(a, b)
+        return a.k < b.k
+    end)
     return result
 end
 
@@ -26,7 +33,7 @@ local function cssToString(ruleset)
             table.insert(buffer, "@media " .. rule.mediaQuery .. "{\n")
         end
 
-        table.insert(buffer, indent .. trim(rule.selector) .. " {\n")
+        table.insert(buffer, indent .. ext.trim(rule.selector) .. " {\n")
 
         for _, e in ipairs(sortTable(rule.declarations)) do
             local decl = "  " .. e.k .. ": " .. e.v .. ";\n"
@@ -35,7 +42,9 @@ local function cssToString(ruleset)
 
         table.insert(buffer, indent .. "}\n")
 
-        if rule.mediaQuery then table.insert(buffer, "}\n") end
+        if rule.mediaQuery then
+            table.insert(buffer, "}\n")
+        end
 
         ::continue::
     end
@@ -50,15 +59,17 @@ local function mediaToString(media)
             table.insert(buffer, "  " .. line)
         end
     end
-    if #buffer > 0 then buffer[#buffer] = ext.trim(buffer[#buffer]) end
+    if #buffer > 0 then
+        buffer[#buffer] = ext.trim(buffer[#buffer])
+    end
 
-    return "@media " .. media.types .. " {\n" .. table.concat(buffer, "\n") ..
-               "}"
+    return "@media " .. media.types .. " {\n" .. table.concat(buffer, "\n")
+               .. "}"
 end
 
-local cssMeta = {__tostring = cssToString; __textContent = cssToString}
+local cssMeta = {__tostring=cssToString; __textContent=cssToString}
 
-local cssMediaMeta = {__tostring = mediaToString; __textContent = mediaToString}
+local cssMediaMeta = {__tostring=mediaToString; __textContent=mediaToString}
 
 local function appendSelector(parent, child, nospace)
     local sep = nospace and "" or " "
@@ -79,10 +90,12 @@ local function appendSelector(parent, child, nospace)
 end
 
 local function _CSS(args, selector)
-    if not selector then selector = "" end
+    if not selector then
+        selector = ""
+    end
 
-    local rule = {mediaQuery = nil; selector = selector; declarations = {}}
-    local result = {type = "css"; rule}
+    local rule = {mediaQuery=nil; selector=selector; declarations={}}
+    local result = {type="css"; rule}
     local subRules = {}
 
     for key, value in pairs(args) do
@@ -94,8 +107,8 @@ local function _CSS(args, selector)
                     table.insert(result, s)
                 end
             elseif type(value) == "number" then
-                rule.declarations[underscore2Dash(key)] = tostring(value) ..
-                                                              "px"
+                rule.declarations[underscore2Dash(key)] =
+                    tostring(value) .. "px"
             elseif key == "@media" then
                 rule.mediaQuery = tostring(value)
             else
@@ -143,37 +156,74 @@ local function _CSS(args, selector)
     return result
 end
 
-local function _CSS_MEDIA(args, types)
-    local result = {types = types; rulesets = args}
-    return result
-end
-
-local function CSS(selector)
+---@param selector string
+---@return function(table): CSSNode
+function css.CSS(selector)
+    --- Defines a CSS node represents a CSS rule.
+    --- It returns a CSS when converted with tostring().
+    --- 
+    --- Example:
+    ---     local CSS = require("css").CSS
+    ---     local c = CSS 'body' {
+    ---         color="blue";
+    ---         background_color="#000";
+    ---     }
+    ---     print(c:tostring())
+    ---     -- Output:
+    ---     -- body {
+    ---     --   color: blue;
+    ---     --   background-color: #000;
+    ---     -- }
     if type(selector) == "table" then
-        local css = _CSS(selector, "")
-        setmetatable(css, cssMeta)
-        return css
+        local style = _CSS(selector, "")
+        setmetatable(style, cssMeta)
+        return style
     end
 
     return function(args)
-        local css = _CSS(args, selector)
-        setmetatable(css, cssMeta)
+        local style = _CSS(args, selector)
+        setmetatable(style, cssMeta)
 
-        return css
+        return style
     end
 end
 
-local function CSS_MEDIA(types)
+---@param types string
+---@return table
+function css.CSS_MEDIA(types)
+    --- Returns an object that represents defintions
+    --- for media queries.
+    --- 
+    --- Example: 
+    --- local CSS_MEDIA = require("css").CSS_MEDIA
+    --- CSS_MEDIA '(orientation: portrait)' {
+    ---    CSS ".post.popup" {
+    ---        max_width = '80vw !important',
+    ---    }
+    --- }
     return function(args)
-        local media = _CSS_MEDIA(args, types)
+        local media = {types=types; rulesets=args}
         setmetatable(media, cssMediaMeta)
         return media
     end
 end
 
-local function importGlobals()
-    _G.CSS = CSS
-    _G.CSS_MEDIA = CSS_MEDIA
+---@return nil
+function css.importGlobals()
+    --- Adds all exported module functions into the global scope.
+    --- 
+    --- Example:
+    ---     -- in web.lua file
+    ---     require("css").importGlobals()
+    ---
+    ---     -- in example.lua file
+    ---     require("web")
+    ---     -- CSS function can now be used without explicity importing
+    ---     CSS '.test' { }
+    strict.disable()
+    CSS = css.CSS
+    CSS_MEDIA = css.CSS_MEDIA
+    strict.enable()
 end
 
-return {CSS = CSS; CSS_MEDIA = CSS_MEDIA; importGlobals = importGlobals}
+return css
