@@ -6,7 +6,7 @@
 
 -----------------
 
-## Rationale / motivations (AKA But why?)
+## Why
 
 Long-story-short, I like lua's "*everything is tables* syntax and philosophy. I personally find it tedious to write HTML by hand, and find it even more laborious to read. HTML is also just a markup language, so it's almost always used as a compilation target for anything beyond the simple use cases.
 
@@ -24,7 +24,7 @@ There are several ways of using moontpl:
 -  Templating engine 
 -  Web framework (TODO)
 
-### Static Site Generator
+### As a Static Site Generator
 
 #### 1. Installation
 
@@ -63,7 +63,7 @@ mkdir -p mysite
 
 # Create a lua page file
 cat << EOF > mysite/index.html.lua
-require("html").importGlobals()
+require("web")
 return DIV { "hello, world" }
 EOF
 
@@ -96,10 +96,8 @@ Read the documentation to learn how to write and make pages with lua!! (WIP)
 
 -----------------
 
-### Templating Engine
+#### As Static site generator with golang extensions
 
-*TODO*
-
-### Web Framework
+### As a Templating Engine
 
 *TODO*

@@ -15,7 +15,7 @@ return MARKDOWN {
 
     L__________________________________________;
 
-    H2 "Rationale / motivations (AKA But why?)";
+    H2 "Why";
 
     P [[Long-story-short, I like lua's "]] / EM "everything is tables" / [[
        syntax and philosophy. I personally find it tedious to write
@@ -43,7 +43,7 @@ return MARKDOWN {
         LI "Web framework (TODO)";
     };
 
-    H3 "Static Site Generator";
+    H3 "As a Static Site Generator";
 
     H4 "1. Installation";
 
@@ -86,7 +86,7 @@ return MARKDOWN {
 
     # Create a lua page file
     cat << EOF > mysite/index.html.lua
-    require("html").importGlobals()
+    require("web")
     return DIV { "hello, world" }
     EOF
     
@@ -106,24 +106,21 @@ return MARKDOWN {
 
     H4 "3. More examples";
 
-    P "You can find more example from the examples repository: (TODO)";
+    P "You can find more example from the examples repository";
 
     PRE ^ CODE {_lang = "bash"} ^ [[
     $ git clone github.com/nvlled/moontpl
     $ cd moontpl/examples
     ]];
 
-    H4 "4. Next steps";
-
-    P "Read the documentation to learn how to write and make pages with lua!! (WIP)";
-
     L__________________________________________;
 
-    H3 "Templating Engine";
+    H4 "As Static site generator with golang extensions";
 
     EM "TODO";
 
-    H3 "Web Framework";
+    H3 "As a Templating Engine";
 
     EM "TODO";
+
 }
