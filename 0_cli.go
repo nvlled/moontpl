@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -61,6 +62,8 @@ type cliArgs struct {
 
 	LuaDir []string `arg:"-l,separate" help:"directories where to find lua files with require(), automatically includes SITEDIR"`
 	RunTag []string `arg:"-t,separate" help:"runtime tags to include in the lua environment"`
+
+	Version bool `arg:"-v" help:"show version number"`
 }
 
 var args cliArgs
@@ -107,6 +110,21 @@ func ExecuteCLI() {
 	switch {
 	default:
 		showHelp(p)
+
+	case args.Version:
+		if Version != "" {
+		} else {
+			buildInfo, ok := debug.ReadBuildInfo()
+			if ok {
+				fmt.Printf("program version: %s\n", buildInfo.Main.Version)
+				for _, e := range buildInfo.Settings {
+					switch e.Key {
+					case "vcs.revision", "vcs.time":
+						fmt.Printf("%v: %v\n", e.Key, e.Value)
+					}
+				}
+			}
+		}
 
 	case args.LuaDoc != nil:
 		if args.LuaDoc.Module != "" {
