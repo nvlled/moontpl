@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -113,17 +112,9 @@ func ExecuteCLI() {
 
 	case args.Version:
 		if Version != "" {
+			fmt.Printf("version: %s\n", Version)
 		} else {
-			buildInfo, ok := debug.ReadBuildInfo()
-			if ok {
-				fmt.Printf("program version: %s\n", buildInfo.Main.Version)
-				for _, e := range buildInfo.Settings {
-					switch e.Key {
-					case "vcs.revision", "vcs.time":
-						fmt.Printf("%v: %v\n", e.Key, e.Value)
-					}
-				}
-			}
+			fmt.Printf("version: development\n")
 		}
 
 	case args.LuaDoc != nil:
