@@ -14,9 +14,9 @@ function site.files(options) ---
     ---
     --- Example:
     --- Suppose SITEDIR contains the following files:
-    --- | index.html.lua
-    --- | dir1
-    --- | dir1/sample.html.lua
+    ---      index.html.lua
+    ---      dir1
+    ---      dir1/sample.html.lua
     --- Then
     ---  site.files()              -- returns {"/index.html", "/dir1/sample.html"}
     ---  site.files{"dir="/dir1"}  -- returns { "/dir1/sample.html"}

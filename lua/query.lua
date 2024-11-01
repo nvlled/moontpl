@@ -79,6 +79,10 @@ function query.select(node, ...)
     ---     local small = query.select(node, "p", "h1", "em")
     ---     print(small:tostring())
     ---     -- Output: <em>there</em>
+    
+    if not node then
+        return nil
+    end
     for _, tag in ipairs(arg) do
         local nextNode = nil
         for _, child in ipairs(node.children or {}) do

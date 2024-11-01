@@ -253,7 +253,7 @@ func ExecuteCLI() {
 			moontpl.Command = CommandServe
 			moontpl.SiteDir = lo.Must(filepath.Abs(args.Serve.SiteDir))
 			moontpl.AddLuaDir(moontpl.SiteDir)
-			moontpl.AddRunTags("serve", "autoreload")
+			moontpl.AddRunTags("serve")
 
 			moontpl.fsWatcher.On(func(filename string) {
 				var modname string

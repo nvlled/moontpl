@@ -131,18 +131,15 @@ func (m *Moontpl) getState(filename string) *lua.LState {
 
 	L.G.Registry.RawSet(filenameRegistryIndex, lua.LString(filename))
 
-	page := getLoadedModule(L, "page")
+	L.DoString(`return require("page")`)
+	page := L.Get(-1)
 	if page != lua.LNil {
 		pagePath := m.getPagePath(filename)
 		L.SetField(page, "PAGE_LINK", lua.LString(pagePath.Link))
 		L.SetField(page, "PAGE_FILENAME", lua.LString(pagePath.AbsFile))
 		L.SetField(page, "data", L.NewTable())
 		L.SetField(page, "input", L.NewTable())
-	}
-
-	hook := getLoadedModule(L, "hook")
-	if hook != lua.LNil {
-		L.SetField(hook, "onPageRender", nil)
+		L.SetField(page, "onRender", lua.LNil)
 	}
 
 	return L
@@ -171,7 +168,6 @@ func (m *Moontpl) createState(initModules ...bool /* = true */) *lua.LState {
 		m.initAddedModules(L)
 		m.initPageModule(L)
 		m.initPathModule(L)
-		m.initHookModule(L)
 		m.initBuildModule(L)
 		m.initTagsModule(L)
 		m.initSiteModule(L)
@@ -301,7 +297,7 @@ func (m *Moontpl) initAddedModules(L *lua.LState) {
 
 func (m *Moontpl) initPathModule(L *lua.LState) {
 	L.PreloadModule("path", func(L *lua.LState) int {
-		mod := L.NewTable()
+		mod := loadDefaultTableModule(L, "path")
 		L.SetField(mod, "getParams", L.NewFunction(func(L *lua.LState) int {
 			link := L.CheckString(1)
 			L.Push(mapToLtable(L, getPathParams(link)))
@@ -365,7 +361,7 @@ func (m *Moontpl) initPathModule(L *lua.LState) {
 
 func (m *Moontpl) initPageModule(L *lua.LState) {
 	L.PreloadModule("page", func(L *lua.LState) int {
-		mod := L.NewTable()
+		mod := loadDefaultTableModule(L, "page")
 
 		filename := string(L.G.Registry.RawGet(filenameRegistryIndex).(lua.LString))
 		pagePath := m.getPagePath(filename)
@@ -407,21 +403,9 @@ func (m *Moontpl) initPageModule(L *lua.LState) {
 	})
 }
 
-func (m *Moontpl) initHookModule(L *lua.LState) {
-	L.PreloadModule("hook", func(L *lua.LState) int {
-		mod := L.NewTable()
-		L.SetField(mod, "onPageRender", L.NewFunction(func(L *lua.LState) int {
-			return 0
-		}))
-
-		L.Push(mod)
-		return 1
-	})
-}
-
 func (m *Moontpl) initBuildModule(L *lua.LState) {
 	L.PreloadModule("build", func(L *lua.LState) int {
-		mod := L.NewTable()
+		mod := loadDefaultTableModule(L, "build")
 		L.SetField(mod, "queue", luar.New(L, m.queueLink))
 		L.Push(mod)
 		return 1
@@ -430,7 +414,7 @@ func (m *Moontpl) initBuildModule(L *lua.LState) {
 
 func (m *Moontpl) initTagsModule(L *lua.LState) {
 	L.PreloadModule("runtags", func(L *lua.LState) int {
-		mod := L.NewTable()
+		mod := loadDefaultTableModule(L, "runtags")
 		for k := range m.runtags {
 			L.SetField(mod, k, lua.LTrue)
 		}
@@ -442,7 +426,7 @@ func (m *Moontpl) initTagsModule(L *lua.LState) {
 
 func (m *Moontpl) initSiteModule(L *lua.LState) {
 	L.PreloadModule("site", func(L *lua.LState) int {
-		mod := L.NewTable()
+		mod := loadDefaultTableModule(L, "site")
 		L.SetField(mod, "files", L.NewFunction(func(L *lua.LState) int {
 			options := L.OptTable(1, L.NewTable())
 
@@ -625,4 +609,26 @@ func getLoadedModule(L *lua.LState, moduleName string) lua.LValue {
 	} else {
 		return loaded.RawGetString(moduleName)
 	}
+}
+
+func loadDefaultTableModule(L *lua.LState, name string) *lua.LTable {
+	fn, err := L.LoadFile("lua/" + name + ".lua")
+	if err != nil {
+		panic(err)
+	}
+
+	var mod *lua.LTable = nil
+	if fn != lua.LNil {
+		L.Push(fn)
+		L.Call(0, 1)
+
+		ret := L.Get(-1)
+		if t, ok := ret.(*lua.LTable); ok {
+			mod = t
+		}
+	}
+	if mod == nil {
+		mod = L.NewTable()
+	}
+	return mod
 }

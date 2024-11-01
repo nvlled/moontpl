@@ -27,11 +27,21 @@ func (m *Moontpl) extractDocumentation(filename string) (string, bool, error) {
 
 	var buf bytes.Buffer
 
+	includeBlock := false
 	includeLast := false
 	for line := range getLines(string(contents)) {
 		line = strings.TrimSpace(line)
 		include := false
-		if strings.HasPrefix(line, luaDocMarker) {
+
+		if line == "---[[" {
+			includeBlock = true
+			line = ""
+		} else if line == "---]]" {
+			includeBlock = false
+			line = ""
+		} else if includeBlock {
+			line = "  " + line
+		} else if strings.HasPrefix(line, luaDocMarker) {
 			line = "" + line[len(luaDocMarker):]
 			if line != "" {
 				if unicode.IsSpace(rune(line[0])) {
@@ -52,13 +62,13 @@ func (m *Moontpl) extractDocumentation(filename string) (string, bool, error) {
 			include = true
 		}
 
-		if include {
+		if include || includeBlock {
 			buf.WriteString(line)
 			buf.WriteString("\n")
 		} else if includeLast {
 			buf.WriteString("\n")
 		}
-		includeLast = include
+		includeLast = include || includeBlock
 	}
 
 	buf.WriteRune('\n')

@@ -16,4 +16,16 @@ function build.queue(link) ---
     --- 
 end
 
+function build.queueLocalLinks(node) ---
+    local build = require "build"
+    local query = require "query"
+    local path = require "path"
+    local links = query.findLocalLinks(node)
+    for _, link in ipairs(links) do
+        if path.hasParams(link) then
+            build.queue(link)
+        end
+    end
+end
+
 return build

@@ -65,8 +65,11 @@ func (m *Moontpl) renderFile(L *lua.LState, filename string) (lua.LValue, error)
 		return lua.LNil, nil
 	}
 
-	if hook, ok := getLoadedModule(L, "hook").(*lua.LTable); ok {
-		onPageRender, isFunc := hook.RawGetString("onPageRender").(*lua.LFunction)
+	if mod, ok := getLoadedModule(L, "page").(*lua.LTable); ok {
+		onPageRender, isFunc := mod.RawGetString("onRender").(*lua.LFunction)
+		if !isFunc {
+			onPageRender, isFunc = mod.RawGetString("onRenderDefault").(*lua.LFunction)
+		}
 		if isFunc {
 			err := L.CallByParam(lua.P{
 				Fn:      onPageRender,

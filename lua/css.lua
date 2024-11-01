@@ -10,7 +10,7 @@ end
 local function sortTable(t)
     local result = {}
     for k, v in pairs(t) do
-        table.insert(result, {k=k; v=v})
+        table.insert(result, { k = k, v = v })
     end
     table.sort(result, function(a, b)
         return a.k < b.k
@@ -64,12 +64,12 @@ local function mediaToString(media)
     end
 
     return "@media " .. media.types .. " {\n" .. table.concat(buffer, "\n")
-               .. "}"
+        .. "}"
 end
 
-local cssMeta = {__tostring=cssToString; __textContent=cssToString}
+local cssMeta = { __tostring = cssToString, __textContent = cssToString }
 
-local cssMediaMeta = {__tostring=mediaToString; __textContent=mediaToString}
+local cssMediaMeta = { __tostring = mediaToString, __textContent = mediaToString }
 
 local function appendSelector(parent, child, nospace)
     local sep = nospace and "" or " "
@@ -94,8 +94,8 @@ local function _CSS(args, selector)
         selector = ""
     end
 
-    local rule = {mediaQuery=nil; selector=selector; declarations={}}
-    local result = {type="css"; rule}
+    local rule = { mediaQuery = nil, selector = selector, declarations = {} }
+    local result = { type = "css", rule }
     local subRules = {}
 
     for key, value in pairs(args) do
@@ -161,7 +161,7 @@ end
 function css.CSS(selector)
     --- Defines a CSS node represents a CSS rule.
     --- It returns a CSS when converted with tostring().
-    --- 
+    ---
     --- Example:
     ---     local CSS = require("css").CSS
     ---     local c = CSS 'body' {
@@ -189,12 +189,12 @@ function css.CSS(selector)
 end
 
 ---@param types string
----@return table
+---@return function(table): table
 function css.CSS_MEDIA(types)
     --- Returns an object that represents defintions
     --- for media queries.
-    --- 
-    --- Example: 
+    ---
+    --- Example:
     --- local CSS_MEDIA = require("css").CSS_MEDIA
     --- CSS_MEDIA '(orientation: portrait)' {
     ---    CSS ".post.popup" {
@@ -202,7 +202,7 @@ function css.CSS_MEDIA(types)
     ---    }
     --- }
     return function(args)
-        local media = {types=types; rulesets=args}
+        local media = { types = types, rulesets = args }
         setmetatable(media, cssMediaMeta)
         return media
     end
@@ -211,7 +211,7 @@ end
 ---@return nil
 function css.importGlobals()
     --- Adds all exported module functions into the global scope.
-    --- 
+    ---
     --- Example:
     ---     -- in web.lua file
     ---     require("css").importGlobals()
