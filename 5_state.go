@@ -297,7 +297,7 @@ func (m *Moontpl) initAddedModules(L *lua.LState) {
 
 func (m *Moontpl) initPathModule(L *lua.LState) {
 	L.PreloadModule("path", func(L *lua.LState) int {
-		mod := loadDefaultTableModule(L, "path")
+		mod := m.loadDefaultTableModule(L, "path")
 		L.SetField(mod, "getParams", L.NewFunction(func(L *lua.LState) int {
 			link := L.CheckString(1)
 			L.Push(mapToLtable(L, getPathParams(link)))
@@ -361,7 +361,7 @@ func (m *Moontpl) initPathModule(L *lua.LState) {
 
 func (m *Moontpl) initPageModule(L *lua.LState) {
 	L.PreloadModule("page", func(L *lua.LState) int {
-		mod := loadDefaultTableModule(L, "page")
+		mod := m.loadDefaultTableModule(L, "page")
 
 		filename := string(L.G.Registry.RawGet(filenameRegistryIndex).(lua.LString))
 		pagePath := m.getPagePath(filename)
@@ -405,7 +405,7 @@ func (m *Moontpl) initPageModule(L *lua.LState) {
 
 func (m *Moontpl) initBuildModule(L *lua.LState) {
 	L.PreloadModule("build", func(L *lua.LState) int {
-		mod := loadDefaultTableModule(L, "build")
+		mod := m.loadDefaultTableModule(L, "build")
 		L.SetField(mod, "queue", luar.New(L, m.queueLink))
 		L.Push(mod)
 		return 1
@@ -414,7 +414,7 @@ func (m *Moontpl) initBuildModule(L *lua.LState) {
 
 func (m *Moontpl) initTagsModule(L *lua.LState) {
 	L.PreloadModule("runtags", func(L *lua.LState) int {
-		mod := loadDefaultTableModule(L, "runtags")
+		mod := m.loadDefaultTableModule(L, "runtags")
 		for k := range m.runtags {
 			L.SetField(mod, k, lua.LTrue)
 		}
@@ -426,7 +426,7 @@ func (m *Moontpl) initTagsModule(L *lua.LState) {
 
 func (m *Moontpl) initSiteModule(L *lua.LState) {
 	L.PreloadModule("site", func(L *lua.LState) int {
-		mod := loadDefaultTableModule(L, "site")
+		mod := m.loadDefaultTableModule(L, "site")
 		L.SetField(mod, "files", L.NewFunction(func(L *lua.LState) int {
 			options := L.OptTable(1, L.NewTable())
 
@@ -611,8 +611,13 @@ func getLoadedModule(L *lua.LState, moduleName string) lua.LValue {
 	}
 }
 
-func loadDefaultTableModule(L *lua.LState, name string) *lua.LTable {
-	fn, err := L.LoadFile("lua/" + name + ".lua")
+func (m *Moontpl) loadDefaultTableModule(L *lua.LState, name string) *lua.LTable {
+	file, err := m.fsys.Open("lua/" + name + ".lua")
+	if err != nil {
+		panic(err)
+	}
+
+	fn, err := L.Load(file, name)
 	if err != nil {
 		panic(err)
 	}
