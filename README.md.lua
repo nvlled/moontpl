@@ -39,8 +39,8 @@ return MARKDOWN {
 
     UL {
         LI "Static site generator";
+        LI "SSG with Golang extensions";
         LI "Templating engine";
-        LI "Web framework (TODO)";
     };
 
     H3 "As a Static Site Generator";
@@ -55,27 +55,28 @@ return MARKDOWN {
     };
 
     PRE ^ CODE {_lang = "bash"} ^
-        [[ $ go install github.com/nvlled/moontpl/cmd/moontpl ]];
+        [[ $ go install github.com/nvlled/moontpl/cmd/moontpl@latest ]];
 
     P "If everything went well, then the command moontpl should be available.";
     P "Running " / CODE "moontpl" /
         " without any arguments should show the help file:";
 
     PRE ^ CODE {_lang = "bash"} ^ [[
-    |$ moontpl
-    |Usage: moontpl [--luadir LUADIR] [--runtag RUNTAG] <command> [<args>]
-    |
-    |Options:
-    |  --luadir LUADIR, -l LUADIR
-    |                         directories where to find lua files with require(), automatically includes SITEDIR
-    |  --runtag RUNTAG, -l RUNTAG
-    |                         runtime tags to include in the lua environment
-    |  --help, -h             display this help and exit
-    |
-    |Commands:
-    |  build
-    |  run
-    |  serve
+    |  Usage: moontpl [--luadir LUADIR] [--runtag RUNTAG] [--version] <command> [<args>]
+    |  
+    |  Options:
+    |    --luadir LUADIR, -l LUADIR
+    |                           directories where to find lua files with require(), automatically includes SITEDIR
+    |    --runtag RUNTAG, -t RUNTAG
+    |                           runtime tags to include in the lua environment
+    |    --version, -v          show version number
+    |    --help, -h             display this help and exit
+    |  
+    |  Commands:
+    |    build
+    |    run
+    |    serve
+    |    luadoc
     ]];
 
     H4 "2. Create a simple site from scratch";
@@ -100,22 +101,15 @@ return MARKDOWN {
     moontpl build mysite/ output/
 
     # Open local web server at http://localhost:9876,
-    # only use for local development, not for production use.
+    # only use for local development, not for production use (yet).
     moontpl serve mysite
     ]];
 
-    H4 "3. More examples";
-
-    P "You can find more example from the examples repository";
-
-    PRE ^ CODE {_lang = "bash"} ^ [[
-    $ git clone github.com/nvlled/moontpl
-    $ cd moontpl/examples
-    ]];
+    P "You can find more examples in the examples repository";
 
     L__________________________________________;
 
-    H4 "As Static site generator with golang extensions";
+    H3 "As Static site generator with golang extensions";
 
     EM "TODO";
 

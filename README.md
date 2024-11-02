@@ -21,8 +21,8 @@ In short, I like using lua as a DSL and I hate reading/writing HTML code directl
 There are several ways of using moontpl:
 
 -  Static site generator 
--  Templating engine 
--  Web framework (TODO)
+-  SSG with Golang extensions 
+-  Templating engine
 
 ### As a Static Site Generator
 
@@ -31,7 +31,7 @@ There are several ways of using moontpl:
 First, install the [go toolchain](https://go.dev/doc/install) if you haven't already. Then run the following command to install to compile and install the binary.
 
 ```bash
-$ go install github.com/nvlled/moontpl/cmd/moontpl
+$ go install github.com/nvlled/moontpl/cmd/moontpl@latest
 ```
 
 If everything went well, then the command moontpl should be available.
@@ -39,20 +39,21 @@ If everything went well, then the command moontpl should be available.
 Running `moontpl` without any arguments should show the help file:
 
 ```bash
-$ moontpl
-Usage: moontpl [--luadir LUADIR] [--runtag RUNTAG] <command> [<args>]
-
-Options:
-  --luadir LUADIR, -l LUADIR
-                         directories where to find lua files with require(), automatically includes SITEDIR
-  --runtag RUNTAG, -l RUNTAG
-                         runtime tags to include in the lua environment
-  --help, -h             display this help and exit
-
-Commands:
-  build
-  run
-  serve
+  Usage: moontpl [--luadir LUADIR] [--runtag RUNTAG] [--version] <command> [<args>]
+  
+  Options:
+    --luadir LUADIR, -l LUADIR
+                           directories where to find lua files with require(), automatically includes SITEDIR
+    --runtag RUNTAG, -t RUNTAG
+                           runtime tags to include in the lua environment
+    --version, -v          show version number
+    --help, -h             display this help and exit
+  
+  Commands:
+    build
+    run
+    serve
+    luadoc
 ```
 
 #### 2. Create a simple site from scratch
@@ -77,26 +78,17 @@ moontpl run mysite/index.html.lua
 moontpl build mysite/ output/
 
 # Open local web server at http://localhost:9876,
-# only use for local development, not for production use.
+# only use for local development, not for production use (yet).
 moontpl serve mysite
 ```
 
-#### 3. More examples
-
-You can find more example from the examples repository: (TODO)
-
-```bash
-$ git clone github.com/nvlled/moontpl
-$ cd moontpl/examples
-```
-
-#### 4. Next steps
-
-Read the documentation to learn how to write and make pages with lua!! (WIP)
+You can find more examples in the examples repository
 
 -----------------
 
-#### As Static site generator with golang extensions
+### As Static site generator with golang extensions
+
+*TODO*
 
 ### As a Templating Engine
 
